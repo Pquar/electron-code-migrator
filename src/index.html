@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Processador de Código</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      .step-indicator {
+        @apply flex items-center justify-center w-10 h-10 rounded-full border-2 font-bold;
+      }
+      .step-active {
+        @apply bg-blue-500 text-white border-blue-500;
+      }
+      .step-completed {
+        @apply bg-green-500 text-white border-green-500;
+      }
+      .step-pending {
+        @apply bg-white text-gray-500 border-gray-300;
+      }
+    </style>
+  </head>
+  <body class="bg-gray-100 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+      <h1 class="text-3xl font-bold text-center mb-8">
+        Processador de Código em Etapas
+      </h1>
+
+      <div id="app" class="bg-white rounded-lg shadow-lg p-6">
+        <!-- Indicadores de Etapas -->
+        <div class="flex items-center justify-between mb-8 px-4">
+          <div class="flex flex-col items-center">
+            <div id="step1-indicator" class="step-indicator step-active">1</div>
+            <span class="text-sm mt-2">Selecionar Pasta</span>
+          </div>
+          <div class="h-0.5 flex-1 bg-gray-300 mx-2" id="line1"></div>
+          <div class="flex flex-col items-center">
+            <div id="step2-indicator" class="step-indicator step-pending">
+              2
+            </div>
+            <span class="text-sm mt-2">Configurar</span>
+          </div>
+          <div class="h-0.5 flex-1 bg-gray-300 mx-2" id="line2"></div>
+          <div class="flex flex-col items-center">
+            <div id="step3-indicator" class="step-indicator step-pending">
+              3
+            </div>
+            <span class="text-sm mt-2">Processar</span>
+          </div>
+          <div class="h-0.5 flex-1 bg-gray-300 mx-2" id="line3"></div>
+          <div class="flex flex-col items-center">
+            <div id="step4-indicator" class="step-indicator step-pending">
+              4
+            </div>
+            <span class="text-sm mt-2">Resultados</span>
+          </div>
+        </div>
+
+        <!-- Conteúdo das Etapas -->
+        <div id="step1" class="step-content">
+          <h2 class="text-xl font-semibold mb-4">
+            Etapa 1: Selecionar Pasta Base
+          </h2>
+          <p class="mb-4">
+            Selecione a pasta que contém o código original que você deseja
+            processar.
+          </p>
+
+          <div class="flex items-center mb-6">
+            <input
+              type="text"
+              id="sourceFolder"
+              class="flex-1 border border-gray-300 rounded-l px-4 py-2"
+              placeholder="Caminho da pasta base"
+              readonly
+            />
+            <button
+              id="selectSourceFolder"
+              class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-r"
+            >
+              Selecionar
+            </button>
+          </div>
+
+          <div class="mt-8 flex justify-end">
+            <button
+              id="nextStep1"
+              class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded disabled:bg-gray-400"
+              disabled
+            >
+              Próximo
+            </button>
+          </div>
+        </div>
+
+        <div id="step2" class="step-content hidden">
+          <h2 class="text-xl font-semibold mb-4">
+            Etapa 2: Configurar Processamento
+          </h2>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="border border-gray-200 rounded-lg p-4">
+              <h3 class="font-semibold mb-3">Pastas de Saída</h3>
+
+              <div class="mb-4">
+                <label class="block text-sm font-medium mb-1"
+                  >Pasta Intermediária</label
+                >
+                <div class="flex">
+                  <input
+                    type="text"
+                    id="tempFolder"
+                    class="flex-1 border border-gray-300 rounded-l px-4 py-2"
+                    placeholder="Caminho para pasta intermediária"
+                    readonly
+                  />
+                  <button
+                    id="selectTempFolder"
+                    class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-r"
+                  >
+                    Selecionar
+                  </button>
+                </div>
+              </div>
+
+              <div class="mb-4">
+                <label class="block text-sm font-medium mb-1"
+                  >Pasta de Saída Final</label
+                >
+                <div class="flex">
+                  <input
+                    type="text"
+                    id="outputFolder"
+                    class="flex-1 border border-gray-300 rounded-l px-4 py-2"
+                    placeholder="Caminho para pasta de saída"
+                    readonly
+                  />
+                  <button
+                    id="selectOutputFolder"
+                    class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-r"
+                  >
+                    Selecionar
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div class="border border-gray-200 rounded-lg p-4">
+              <h3 class="font-semibold mb-3">Opções de Simplificação</h3>
+
+              <div class="flex items-center mb-3">
+                <input
+                  type="checkbox"
+                  id="removeComments"
+                  class="mr-2"
+                  checked
+                />
+                <label for="removeComments">Remover comentários</label>
+              </div>
+
+              <div class="flex items-center mb-3">
+                <input type="checkbox" id="reduceKeywords" class="mr-2" />
+                <label for="reduceKeywords">Reduzir palavras-chave</label>
+              </div>
+
+              <div class="flex items-center">
+                <input type="checkbox" id="minify" class="mr-2" />
+                <label for="minify">Minificar levemente o código</label>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-8 border border-gray-200 rounded-lg p-4">
+            <h3 class="font-semibold mb-3">Opções de Conversão</h3>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-medium mb-1"
+                  >Provedor de IA</label
+                >
+                <select
+                  id="provider"
+                  class="w-full border border-gray-300 rounded px-4 py-2"
+                >
+                  <option value="openai">OpenAI (GPT)</option>
+                  <option value="gemini">Google Gemini</option>
+                  <option value="llama-local">Llama Local</option>
+                  <option value="anthropic">Anthropic Claude</option>
+                </select>
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium mb-1"
+                  >Linguagem Alvo</label
+                >
+                <select
+                  id="targetLanguage"
+                  class="w-full border border-gray-300 rounded px-4 py-2"
+                >
+                  <option value="javascript">JavaScript</option>
+                  <option value="typescript">TypeScript</option>
+                  <option value="python">Python</option>
+                  <option value="java">Java</option>
+                  <option value="csharp">C#</option>
+                  <option value="cpp">C++</option>
+                  <option value="ruby">Ruby</option>
+                  <option value="go">Go</option>
+                  <option value="rust">Rust</option>
+                  <option value="php">PHP</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="mt-4">
+              <label class="block text-sm font-medium mb-1">Chave de API</label>
+              <input
+                type="password"
+                id="apiKey"
+                class="w-full border border-gray-300 rounded px-4 py-2"
+                placeholder="Insira sua chave de API"
+              />
+            </div>
+          </div>
+
+          <div class="mt-8 flex justify-between">
+            <button
+              id="prevStep2"
+              class="border border-gray-300 bg-white hover:bg-gray-100 text-gray-800 px-6 py-2 rounded"
+            >
+              Anterior
+            </button>
+            <button
+              id="nextStep2"
+              class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded disabled:bg-gray-400"
+              disabled
+            >
+              Próximo
+            </button>
+          </div>
+        </div>
+
+        <div id="step3" class="step-content hidden">
+          <h2 class="text-xl font-semibold mb-4">
+            Etapa 3: Processando Código
+          </h2>
+
+          <div class="bg-gray-100 rounded-lg p-6 mb-6">
+            <h3 class="font-semibold mb-3">Resumo da Configuração</h3>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <div>
+                <p>
+                  <strong>Pasta Base:</strong>
+                  <span id="summarySource" class="text-sm"></span>
+                </p>
+                <p>
+                  <strong>Pasta Intermediária:</strong>
+                  <span id="summaryTemp" class="text-sm"></span>
+                </p>
+                <p>
+                  <strong>Pasta de Saída:</strong>
+                  <span id="summaryOutput" class="text-sm"></span>
+                </p>
+              </div>
+
+              <div>
+                <p>
+                  <strong>Provedor de IA:</strong>
+                  <span id="summaryProvider"></span>
+                </p>
+                <p>
+                  <strong>Linguagem Alvo:</strong>
+                  <span id="summaryLanguage"></span>
+                </p>
+                <p>
+                  <strong>Opções:</strong>
+                  <span id="summaryOptions" class="text-sm"></span>
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div class="mb-6">
+            <div class="w-full bg-gray-200 rounded-full h-4">
+              <div
+                id="progressBar"
+                class="bg-blue-500 h-4 rounded-full transition-all duration-300"
+                style="width: 0%"
+              ></div>
+            </div>
+            <p id="progressText" class="text-center mt-2">
+              Aguardando início do processamento...
+            </p>
+          </div>
+
+          <div class="mb-6">
+            <h3 class="font-semibold mb-2">Log de Processamento</h3>
+            <div
+              id="processLog"
+              class="h-40 overflow-y-auto border border-gray-300 rounded p-3 bg-gray-50 font-mono text-sm"
+            ></div>
+          </div>
+
+          <div class="mt-8 flex justify-between">
+            <button
+              id="prevStep3"
+              class="border border-gray-300 bg-white hover:bg-gray-100 text-gray-800 px-6 py-2 rounded"
+            >
+              Anterior
+            </button>
+            <button
+              id="startProcessing"
+              class="bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded"
+            >
+              Iniciar Processamento
+            </button>
+            <button
+              id="nextStep3"
+              class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded disabled:bg-gray-400"
+              disabled
+            >
+              Próximo
+            </button>
+          </div>
+        </div>
+
+        <div id="step4" class="step-content hidden">
+          <h2 class="text-xl font-semibold mb-4">Etapa 4: Resultados</h2>
+
+          <div class="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
+            <div class="flex items-center mb-2">
+              <svg
+                class="w-6 h-6 text-green-500 mr-2"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M5 13l4 4L19 7"
+                ></path>
+              </svg>
+              <h3 class="font-semibold text-green-700">
+                Processamento Concluído
+              </h3>
+            </div>
+            <p>O código foi processado com sucesso. Resumo do processamento:</p>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+            <div class="border border-gray-200 rounded-lg p-4">
+              <h3 class="font-semibold mb-2">Arquivos Processados</h3>
+              <p id="filesCount" class="text-2xl font-bold text-blue-600">0</p>
+              <p class="text-sm text-gray-600">
+                Arquivos processados com sucesso
+              </p>
+            </div>
+
+            <div class="border border-gray-200 rounded-lg p-4">
+              <h3 class="font-semibold mb-2">Tempo de Processamento</h3>
+              <p id="processingTime" class="text-2xl font-bold text-blue-600">
+                0s
+              </p>
+              <p class="text-sm text-gray-600">Tempo total de processamento</p>
+            </div>
+
+            <div class="border border-gray-200 rounded-lg p-4">
+              <h3 class="font-semibold mb-2">Tamanho dos Arquivos</h3>
+              <p id="filesSize" class="text-2xl font-bold text-blue-600">
+                0 KB
+              </p>
+              <p class="text-sm text-gray-600">
+                Tamanho total dos arquivos processados
+              </p>
+            </div>
+          </div>
+
+          <div class="mb-6">
+            <h3 class="font-semibold mb-2">Detalhes dos Arquivos</h3>
+            <div class="overflow-x-auto">
+              <table class="min-w-full bg-white border border-gray-200">
+                <thead>
+                  <tr>
+                    <th
+                      class="py-2 px-4 border-b border-gray-200 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                    >
+                      Arquivo Original
+                    </th>
+                    <th
+                      class="py-2 px-4 border-b border-gray-200 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                    >
+                      Arquivo Simplificado
+                    </th>
+                    <th
+                      class="py-2 px-4 border-b border-gray-200 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                    >
+                      Arquivo Convertido
+                    </th>
+                  </tr>
+                </thead>
+                <tbody id="filesList">
+                  <!-- Os arquivos processados serão inseridos aqui -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="mt-8 flex justify-between">
+            <button
+              id="prevStep4"
+              class="border border-gray-300 bg-white hover:bg-gray-100 text-gray-800 px-6 py-2 rounded"
+            >
+              Anterior
+            </button>
+            <button
+              id="openOutputFolder"
+              class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded"
+            >
+              Abrir Pasta de Saída
+            </button>
+            <button
+              id="startNew"
+              class="bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded"
+            >
+              Novo Processamento
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="../dist/renderer.js"></script>
+  </body>
+</html>
