@@ -1,15 +1,6 @@
-// Adicione no início do renderer.ts
 console.log("Renderer script loaded");
-const folder = window.api.selectFolder();
-// Adicione nos event listenconst folder = await window.api.selectFolder();ers
-document
-  .getElementById("selectSourceFolder")
-  ?.addEventListener("click", async () => {
-    console.log("Select source folder clicked");
-    const folder = await window.api.selectFolder();
-    console.log("Selected folder:", folder);
-    // ... resto do código
-  });
+
+// Removemos a chamada imediata de selectFolder() que estava causando o problema
 
 document.addEventListener("DOMContentLoaded", () => {
   let currentStep = 1;
@@ -83,36 +74,60 @@ document.addEventListener("DOMContentLoaded", () => {
   document
     .getElementById("selectSourceFolder")
     ?.addEventListener("click", async () => {
-      const folder = await window.api.selectFolder();
-      if (folder) {
-        formData.sourceFolder = folder;
-        (document.getElementById("sourceFolder") as HTMLInputElement).value =
-          folder;
-        validateStep1();
+      try {
+        console.log("Selecionando pasta de origem...");
+        const folder = await window.api.selectFolder();
+        console.log("Pasta selecionada:", folder);
+        if (folder) {
+          formData.sourceFolder = folder;
+          (document.getElementById("sourceFolder") as HTMLInputElement).value =
+            folder;
+          validateStep1();
+        } else {
+          console.log("Nenhuma pasta selecionada ou diálogo cancelado");
+        }
+      } catch (error) {
+        console.error("Erro ao selecionar pasta:", error);
       }
     });
 
   document
     .getElementById("selectTempFolder")
     ?.addEventListener("click", async () => {
-      const folder = await window.api.selectFolder();
-      if (folder) {
-        formData.tempFolder = folder;
-        (document.getElementById("tempFolder") as HTMLInputElement).value =
-          folder;
-        validateStep2();
+      try {
+        console.log("Selecionando pasta temporária...");
+        const folder = await window.api.selectFolder();
+        console.log("Pasta temporária selecionada:", folder);
+        if (folder) {
+          formData.tempFolder = folder;
+          (document.getElementById("tempFolder") as HTMLInputElement).value =
+            folder;
+          validateStep2();
+        } else {
+          console.log("Nenhuma pasta temporária selecionada ou diálogo cancelado");
+        }
+      } catch (error) {
+        console.error("Erro ao selecionar pasta temporária:", error);
       }
     });
 
   document
     .getElementById("selectOutputFolder")
     ?.addEventListener("click", async () => {
-      const folder = await window.api.selectFolder();
-      if (folder) {
-        formData.outputFolder = folder;
-        (document.getElementById("outputFolder") as HTMLInputElement).value =
-          folder;
-        validateStep2();
+      try {
+        console.log("Selecionando pasta de saída...");
+        const folder = await window.api.selectFolder();
+        console.log("Pasta de saída selecionada:", folder);
+        if (folder) {
+          formData.outputFolder = folder;
+          (document.getElementById("outputFolder") as HTMLInputElement).value =
+            folder;
+          validateStep2();
+        } else {
+          console.log("Nenhuma pasta de saída selecionada ou diálogo cancelado");
+        }
+      } catch (error) {
+        console.error("Erro ao selecionar pasta de saída:", error);
       }
     });
 

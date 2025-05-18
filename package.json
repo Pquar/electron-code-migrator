@@ -12,11 +12,12 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.51.0",
     "@llama-node/llama-cpp": "^0.1.6",
-    "axios": "^1.6.0",
-    "fs-extra": "^11.1.0",
+    "axios": "^1.9.0",
+    "fs-extra": "^11.3.0",
     "google-auth-library": "^9.0.0",
     "llama-node": "^0.1.6",
     "openai": "^4.100.0",
+    "path": "^0.12.7",
     "tailwindcss": "^3.3.0"
   },
   "devDependencies": {

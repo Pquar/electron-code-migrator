@@ -1,12 +1,24 @@
-// @ts-ignore
-import { ipcRenderer } from "electron";
-const contextBridge = (window as any).contextBridge || require('electron').contextBridge;
+// preload.ts
+import { contextBridge, ipcRenderer } from 'electron';
 
-contextBridge.exposeInMainWorld("api", {
+// Expõe as funções seguras para o processo de renderização
+contextBridge.exposeInMainWorld('api', {
+  // Esta função permite selecionar uma pasta
   selectFolder: async () => {
-    return await ipcRenderer.invoke("select-folder");
+    try {
+      return await ipcRenderer.invoke('select-folder');
+    } catch (error) {
+      console.error('Erro ao selecionar pasta:', error);
+      return null;
+    }
   },
-  processCode: (options: any) => {
-    return ipcRenderer.invoke("process-code", options);
-  },
+  // Esta função processa o código com as opções especificadas
+  processCode: async (options: any) => {
+    try {
+      return await ipcRenderer.invoke('process-code', options);
+    } catch (error) {
+      console.error('Erro ao processar código:', error);
+      throw error;
+    }
+  }
 });
