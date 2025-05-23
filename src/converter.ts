@@ -2,7 +2,9 @@ import axios from "axios";
 import { OpenAI } from "openai";
 import Anthropic from "@anthropic-ai/sdk";
 import { ConversionOptions } from "./interface";
-import { llamaLocalConvert } from "./processor";
+import { llamaLocalConvert, llamaApiConvert } from "./processor";
+import fs from 'fs';
+import path from 'path';
 
 /**
  * Converte código de uma linguagem para outra usando o provedor de IA especificado
@@ -30,6 +32,7 @@ export async function convertCode(
         return await convertWithGemini(code, sourceLanguage, options);
       case "anthropic":
         return await convertWithAnthropic(code, sourceLanguage, options);
+      case "llama-local":
       case "llama":
         return await convertWithLLama(code, sourceLanguage, options);
       default:
@@ -165,7 +168,7 @@ async function convertWithAnthropic(
 }
 
 /**
- * Converte código usando o LLama local
+ * Converte código usando o LLama (local ou API)
  */
 async function convertWithLLama(
   code: string,
@@ -175,13 +178,26 @@ async function convertWithLLama(
   try {
     const prompt = createConversionPrompt(code, sourceLanguage, options.targetLanguage);
     
-    // Chama a função llamaLocalConvert que está no processor.ts
-    const convertedCode = await llamaLocalConvert(prompt);
-    
-    return sanitizeCode(convertedCode);
+    if (options.provider === "llama") {
+      // Valida configurações da API
+      if (!options.apiUrl) {
+        throw new Error("URL da API Llama não fornecida");
+      }
+      if (!options.apiKey) {
+        throw new Error("API Key do Llama não fornecida");
+      }
+
+      // Chama a versão da API HTTP
+      const convertedCode = await llamaApiConvert(prompt, options.apiUrl, options.apiKey);
+      return sanitizeCode(convertedCode);
+    } else {
+      // Chama a versão local
+      const convertedCode = await llamaLocalConvert(prompt);
+      return sanitizeCode(convertedCode);
+    }
   } catch (error: any) {
-    console.error("Erro ao converter com LLama local:", error);
-    throw new Error(`Falha ao converter o código usando LLama: ${error.message}`);
+    console.error(`Erro ao converter com ${options.provider === "llama" ? "API" : "local"} Llama:`, error);
+    throw new Error(`Falha ao converter o código usando ${options.provider === "llama" ? "API" : "local"} Llama: ${error.message}`);
   }
 }
 
@@ -232,6 +248,25 @@ function sanitizeCode(codeText: string): string {
   return cleanedCode.trim();
 }
 
+export async function convertFileToLanguage(
+  filePath: string,
+  targetLanguage: string,
+  apiUrl: string,
+  apiKey: string
+): Promise<string> {
+  if (!fs.existsSync(filePath)) {
+    throw new Error(`Arquivo não encontrado: ${filePath}`);
+  }
+
+  const code = fs.readFileSync(filePath, 'utf8');
+  const ext = path.extname(filePath);
+  const sourceLanguage = getLanguageFromExtension(ext);
+  const prompt = createConversionPrompt(code, sourceLanguage, targetLanguage);
+
+  const result = await llamaApiConvert(prompt, apiUrl, apiKey);
+  return result;
+}
+
 /**
  * Determina a linguagem com base na extensão do arquivo
  */
@@ -259,5 +294,5 @@ function getLanguageFromExtension(fileExtension: string): string {
     ".sh": "bash",
   };
 
-  return extensionMap[fileExtension.toLowerCase()] || "unknown";
+  return extensionMap[fileExtension.toLowerCase()] || "plaintext"; // Retorna 'plaintext' como padrão em vez de 'unknown'
 }

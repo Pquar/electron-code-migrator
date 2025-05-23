@@ -1,0 +1,1 @@
+{"root":["./src/converter.ts","./src/interface.ts","./src/main.ts","./src/preload.ts","./src/processor.ts","./src/renderer.ts","./src/simplifier.ts","./src/types/electron.d.ts"],"errors":true,"version":"5.8.3"}

@@ -1,8 +1,6 @@
 console.log("Renderer script loaded");
 
-// Removemos a chamada imediata de selectFolder() que estava causando o problema
-
-document.addEventListener("DOMContentLoaded", function () {
+document.addEventListener("DOMContentLoaded", () => {
   let currentStep = 1;
   const totalSteps = 5;
 
@@ -167,13 +165,13 @@ document.addEventListener("DOMContentLoaded", function () {
   document.getElementById("provider")?.addEventListener("change", (e) => {
     const provider = (e.target as HTMLSelectElement).value;
     formData.conversionOptions.provider = provider as any;
-
+    
     // Mostrar/esconder o campo de URL da API para o Llama
     const apiUrlContainer = document.getElementById("apiUrlContainer");
     if (apiUrlContainer) {
       apiUrlContainer.style.display = provider === "llama" ? "block" : "none";
     }
-
+    
     validateStep2();
   });
 
@@ -223,20 +221,20 @@ document.addEventListener("DOMContentLoaded", function () {
     const nextButton = document.getElementById(
       "nextStep2"
     ) as HTMLButtonElement;
-
+    
     const needsApiKey = ["openai", "gemini", "anthropic", "llama"].includes(
       formData.conversionOptions.provider
     );
-
+    
     const needsApiUrl = formData.conversionOptions.provider === "llama";
-
+    
     const isValid = Boolean(
       formData.tempFolder &&
         formData.outputFolder &&
         (!needsApiKey || formData.conversionOptions.apiKey) &&
         (!needsApiUrl || formData.conversionOptions.apiUrl)
     );
-
+    
     nextButton.disabled = !isValid;
   }
 
@@ -249,40 +247,42 @@ document.addEventListener("DOMContentLoaded", function () {
       stepContents[i]?.classList.add("hidden");
 
       // Atualizar indicadores
-      const indicator = stepIndicators[i];
-      if (indicator) {
-        indicator.classList.remove(
+      if (stepIndicators[i]) {
+        stepIndicators[i]!.classList.remove(
           "step-active",
           "step-completed",
           "step-pending"
         );
-
-        if (i < step) {
-          indicator.classList.add("step-completed");
-        } else if (i === step) {
-          indicator.classList.add("step-active");
-        } else {
-          indicator.classList.add("step-pending");
-        }
+        stepIndicators[i]!.classList.add(
+          i === step
+            ? "step-active"
+            : i < step
+            ? "step-completed"
+            : "step-pending"
+        );
       }
+    }
 
-      // Atualizar linhas de conexão
-      if (i < totalSteps && lineIndicators[i]) {
-        if (i < step) {
-          lineIndicators[i]?.classList.remove("bg-gray-300");
-          lineIndicators[i]?.classList.add("bg-green-500");
-        } else {
-          lineIndicators[i]?.classList.remove("bg-green-500");
-          lineIndicators[i]?.classList.add("bg-gray-300");
-        }
-      }
-    } // Exibir etapa atual
+    // Mostrar a etapa atual
     stepContents[step]?.classList.remove("hidden");
     currentStep = step;
 
-    // Ações específicas para cada etapa
+    // Atualizar linhas de conexão
+    for (let i = 1; i < totalSteps; i++) {
+      if (lineIndicators[i]) {
+        lineIndicators[i]!.classList.remove("bg-blue-500", "bg-gray-300");
+        lineIndicators[i]!.classList.add(i < step ? "bg-blue-500" : "bg-gray-300");
+      }
+    }
+
+    // Atualizar detalhes específicos para cada etapa
+    updateStepDetails(step);
+  }
+
+  // Função para atualizar detalhes específicos para cada etapa
+  function updateStepDetails(step: number) {
     if (step === 3) {
-      // Atualizar informações na tela de minificação
+      // Atualizar informações de minificação
       const minifySourceElement = document.getElementById("minifySource");
       const minifyTempElement = document.getElementById("minifyTemp");
       const minifyOptionsElement = document.getElementById("minifyOptions");
@@ -290,7 +290,7 @@ document.addEventListener("DOMContentLoaded", function () {
       if (minifySourceElement && minifyTempElement && minifyOptionsElement) {
         minifySourceElement.textContent = formData.sourceFolder;
         minifyTempElement.textContent = formData.tempFolder;
-
+        
         const options = [];
         if (formData.simplificationOptions.removeComments)
           options.push("Remover comentários");
@@ -298,7 +298,6 @@ document.addEventListener("DOMContentLoaded", function () {
           options.push("Reduzir palavras-chave");
         if (formData.simplificationOptions.minify)
           options.push("Minificar código");
-
         minifyOptionsElement.textContent = options.join(", ") || "Nenhuma";
       }
 
@@ -331,7 +330,7 @@ document.addEventListener("DOMContentLoaded", function () {
       if (formData.simplificationOptions.reduceKeywords)
         options.push("Reduzir palavras-chave");
       if (formData.simplificationOptions.minify)
-        options.push("Minificar código");
+        options.push("Minificar código");      
       document.getElementById("summaryOptions")!.textContent =
         options.join(", ") || "Nenhuma";
     }
@@ -350,7 +349,9 @@ document.addEventListener("DOMContentLoaded", function () {
       default:
         return provider;
     }
-  } // Função para iniciar a minificação
+  }
+  
+  // Função para iniciar a minificação
   async function startMinification() {
     const startButton = document.getElementById(
       "startMinification"
@@ -368,24 +369,22 @@ document.addEventListener("DOMContentLoaded", function () {
 
       // Simulação inicial para feedback visual
       await simulateMinificationProgress(10);
-
+      
       // Chamar o processo real de minificação
       const result: any = await window.api.minifyFiles(formData);
-
+      
       if (!result || !result.success) {
         throw new Error(result?.error || "Erro desconhecido na minificação");
       }
-
+      
       // Simulação final para feedback visual
       for (let i = 50; i <= 100; i += 10) {
         await simulateMinificationProgress(i);
       }
-
+      
       minificationResults = result;
-      logMinificationMessage(
-        `✅ Minificação concluída com sucesso! ${result.result.minifiedFiles.length} arquivos processados.`
-      );
-
+      logMinificationMessage(`✅ Minificação concluída com sucesso! ${result.result.minifiedFiles.length} arquivos processados.`);
+      
       // Atualizar informações na UI
       updateMinificationSummary();
       nextButton.disabled = false;
@@ -396,6 +395,7 @@ document.addEventListener("DOMContentLoaded", function () {
       startButton.textContent = "Iniciar Minificação";
     }
   }
+  
   // Função para iniciar o processamento
   async function startProcessing() {
     const startButton = document.getElementById(
@@ -473,6 +473,7 @@ document.addEventListener("DOMContentLoaded", function () {
       progressText.textContent = `${percent}% concluído`;
     }
   }
+  
   // Função para resetar o progresso
   function resetProgress() {
     updateProgress(0);
@@ -481,6 +482,7 @@ document.addEventListener("DOMContentLoaded", function () {
       logElement.innerHTML = "";
     }
   }
+  
   // Função para resetar o progresso da minificação
   function resetMinificationProgress() {
     updateMinificationProgress(0);
@@ -513,6 +515,7 @@ document.addEventListener("DOMContentLoaded", function () {
       }, 200);
     });
   }
+  
   // Função para adicionar mensagem ao log da minificação
   function logMinificationMessage(message: string) {
     const logElement = document.getElementById("minifyLog");
@@ -524,16 +527,13 @@ document.addEventListener("DOMContentLoaded", function () {
       logElement.scrollTop = logElement.scrollHeight;
     }
   }
+
+  // Função para atualizar o resumo da minificação
   function updateMinificationSummary() {
     // Atualiza informações básicas sobre a minificação
     const minifySourceElement = document.getElementById("minifySource");
     const minifyTempElement = document.getElementById("minifyTemp");
     const minifyOptionsElement = document.getElementById("minifyOptions");
-    const totalTokensElement = document.getElementById("totalTokens");
-    const totalSizeElement = document.getElementById("totalSize");
-    const tokenReductionElement = document.getElementById("tokenReduction");
-    const sizeReductionElement = document.getElementById("sizeReduction");
-    const processedFilesCountElement = document.getElementById("processedFilesCount");
 
     if (minifySourceElement && minifyTempElement && minifyOptionsElement) {
       minifySourceElement.textContent = formData.sourceFolder;
@@ -552,46 +552,35 @@ document.addEventListener("DOMContentLoaded", function () {
     
     // Se já temos resultados, mostra o resumo completo
     if (minificationResults && minificationResults.success) {
-      const result = (minificationResults as MinificationResponse).result;
+      const totalFiles = minificationResults.result.minifiedFiles?.length || 0;
+      const totalSizeReduction = minificationResults.result.sizeReduction || 0;
       
-      // Atualizar métricas gerais
-      if (totalTokensElement) {
-        totalTokensElement.textContent = `${result.totalOriginalTokens.toLocaleString()} → ${result.totalMinifiedTokens.toLocaleString()}`;
+      const fileCountElement = document.getElementById("fileCount");
+      if (fileCountElement) {
+        fileCountElement.textContent = `${totalFiles} arquivos`;
       }
       
-      if (totalSizeElement) {
-        totalSizeElement.textContent = `${result.totalOriginalSize} → ${result.totalMinifiedSize}`;
-      }
-      
-      if (tokenReductionElement) {
-        const tokenReduction = ((result.totalOriginalTokens - result.totalMinifiedTokens) / result.totalOriginalTokens * 100).toFixed(1);
-        tokenReductionElement.textContent = `${tokenReduction}%`;
-      }
-      
-      if (sizeReductionElement) {
-        sizeReductionElement.textContent = `${result.sizeReduction}%`;
-      }
-      
-      if (processedFilesCountElement) {
-        processedFilesCountElement.textContent = result.minifiedFiles.length.toString();
-      }
-
-      // Atualizar tabela de detalhes
-      const detailsTable = document.getElementById("minificationDetails");
-      if (detailsTable) {
-        detailsTable.innerHTML = "";
-        
-        result.minifiedFiles.forEach((file: MinifiedFile) => {
-          const row = document.createElement("tr");
-          row.innerHTML = `
-            <td class="py-2 px-4 border-b border-gray-200">${getShortPath(file.original)}</td>
-            <td class="py-2 px-4 border-b border-gray-200">${file.originalTokens.toLocaleString()}</td>
-            <td class="py-2 px-4 border-b border-gray-200">${file.minifiedTokens.toLocaleString()}</td>
-            <td class="py-2 px-4 border-b border-gray-200">${file.originalSize}</td>
-            <td class="py-2 px-4 border-b border-gray-200">${file.minifiedSize}</td>
-          `;
-          detailsTable.appendChild(row);
-        });
+      const summaryElement = document.getElementById("minificationSummary");
+      if (summaryElement) {
+        summaryElement.innerHTML = `
+          <div class="bg-green-50 border border-green-200 rounded-lg p-4 mt-4">
+            <div class="flex items-center">
+              <div class="flex-shrink-0">
+                <svg class="h-5 w-5 text-green-400" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+                </svg>
+              </div>
+              <div class="ml-3">
+                <h3 class="text-sm font-medium text-green-800">Minificação Concluída</h3>
+                <div class="mt-2 text-sm text-green-700">
+                  <p>📁 Arquivos processados: <strong>${totalFiles}</strong></p>
+                  <p>📉 Redução de tamanho: <strong>${totalSizeReduction}%</strong></p>
+                  <p>📂 Arquivos salvos em: <strong>${formData.tempFolder}</strong></p>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
       }
     }
   }
@@ -607,7 +596,8 @@ document.addEventListener("DOMContentLoaded", function () {
       logElement.scrollTop = logElement.scrollHeight;
     }
   }
-  // Função para atualizar os resultados na etapa 4
+
+  // Função para atualizar os resultados na etapa 5
   function updateProcessingResults() {
     if (!processingResults || !processingResults.success) return;
 
@@ -668,7 +658,7 @@ document.addEventListener("DOMContentLoaded", function () {
     }
     return path;
   }
-
+  
   // Função para resetar o aplicativo
   function resetApplication() {
     formData.sourceFolder = "";
@@ -701,44 +691,16 @@ document.addEventListener("DOMContentLoaded", function () {
 
     navigateToStep(1);
   }
-  // Inicialização da interface após o carregamento do documento
+
+  // Inicialização da interface
   validateStep1();
   validateStep2();
 
-  // Configura o listener para progresso da migração
+  // Adiciona um listener para exibir o progresso da migração
   window.electronAPI.onMigrationProgress((message: string) => {
     const progressElement = document.getElementById("migration-progress");
     if (progressElement) {
       progressElement.textContent = message;
     }
   });
-
-  // Inicia o processo de migração
-  window.electronAPI.logMessage(
-    "Iniciando a etapa 3: Conversão de arquivos..."
-  );
 });
-
-interface MinifiedFile {
-  original: string;
-  minified: string;
-  originalTokens: number;
-  minifiedTokens: number;
-  originalSize: string;
-  minifiedSize: string;
-}
-
-interface MinificationResult {
-  minifiedFiles: MinifiedFile[];
-  sizeReduction: number;
-  totalOriginalSize: string;
-  totalMinifiedSize: string;
-  totalOriginalTokens: number;
-  totalMinifiedTokens: number;
-}
-
-interface MinificationResponse {
-  success: boolean;
-  result: MinificationResult;
-  error?: string;
-}

@@ -1,8 +1,7 @@
 import { app, BrowserWindow, dialog, ipcMain } from "electron";
 import * as path from "path";
 import * as fs from "fs-extra";
-import { processFiles } from "./processor";
-import { OpenDialogResult } from "./types/electron";
+import { processFiles, minifyFiles } from "./processor";
 
 let mainWindow: BrowserWindow | null = null;
 
@@ -85,6 +84,39 @@ function setupIpcHandlers() {
     } catch (error) {
       console.error("Erro ao selecionar pasta:", error);
       return null;
+    }
+  });
+
+  // Handler para minificar os arquivos
+  ipcMain.handle("minify-files", async (_, options) => {
+    console.log(
+      "Iniciando minificação de arquivos com opções:",
+      JSON.stringify(options, null, 2)
+    );
+
+    try {
+      // Validar opções recebidas
+      validateProcessOptions(options);
+
+      // Processar arquivos - apenas etapa de minificação
+      const result = await minifyFiles(options);
+
+      console.log("Minificação concluída com sucesso");
+      return {
+        success: true,
+        result,
+        stats: {
+          minifiedFiles: result.minifiedFiles.length,
+          sizeReduction: result.sizeReduction,
+        },
+      };
+    } catch (error: any) {
+      console.error("Erro durante a minificação:", error);
+      return {
+        success: false,
+        error: error.message,
+        stack: process.env.NODE_ENV === "development" ? error.stack : undefined,
+      };
     }
   });
 
@@ -212,15 +244,18 @@ function validateProcessOptions(options: any) {
     throw new Error("Provedor de IA não especificado");
   }
 
-  // Verificar se a API Key foi fornecida para provedores que precisam
-  if (
-    ["openai", "gemini", "anthropic"].includes(
-      options.conversionOptions.provider
-    ) &&
-    !options.conversionOptions.apiKey
-  ) {
+  // Verificar se a API Key foi fornecida para provedores que precisam  // Verifica se os provedores que precisam de API Key a forneceram
+  const needsApiKey = ["openai", "gemini", "anthropic", "llama"].includes(
+    options.conversionOptions.provider
+  );
+  if (needsApiKey && !options.conversionOptions.apiKey) {
     throw new Error(
       `API Key não fornecida para o provedor ${options.conversionOptions.provider}`
     );
+  }
+
+  // Verifica se o Llama API tem a URL fornecida
+  if (options.conversionOptions.provider === "llama" && !options.conversionOptions.apiUrl) {
+    throw new Error("URL da API Llama não fornecida");
   }
 }

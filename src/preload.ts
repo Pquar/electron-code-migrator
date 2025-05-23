@@ -12,6 +12,15 @@ contextBridge.exposeInMainWorld('api', {
       return null;
     }
   },
+  // Esta função realiza a minificação dos arquivos
+  minifyFiles: async (options: any) => {
+    try {
+      return await ipcRenderer.invoke('minify-files', options);
+    } catch (error) {
+      console.error('Erro ao minificar arquivos:', error);
+      throw error;
+    }
+  },
   // Esta função processa o código com as opções especificadas
   processCode: async (options: any) => {
     try {
@@ -21,4 +30,11 @@ contextBridge.exposeInMainWorld('api', {
       throw error;
     }
   }
+});
+
+contextBridge.exposeInMainWorld("electronAPI", {
+  logMessage: (message: string) => ipcRenderer.send("log:message", message),
+  onMigrationProgress: (callback: (message: string) => void) => {
+    ipcRenderer.on("migration:progress", (_, message) => callback(message));
+  },
 });
