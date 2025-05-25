@@ -105,109 +105,127 @@ function setupProcessingListeners(windowObj: Window) {
     tokensInfo?: { sent: number, received: number };
     fileSize?: { original: number, processed: number };
   }> = [];
+  let totalFiles = 0;
+  let completedFiles = 0;
   
   windowObj.logger.onFileProcessingStart((data: { totalFiles: number }) => {
+    totalFiles = data.totalFiles;
+    completedFiles = 0;
     processingStartTime = Date.now();
     windowObj.processingStartTimeEstimation = processingStartTime;
     windowObj.processingTotalFiles = data.totalFiles;
     windowObj.processingCompletedFiles = 0;
     windowObj.processingTokensTotal = { sent: 0, received: 0 };
     processingFilesDetails = [];
-    logMessage(`🚀 Starting processing of ${data.totalFiles} files...`);
-    updateProgress(0, "Calculating...");
+    logMessage(`🚀 Iniciando processamento de ${data.totalFiles} arquivos...`);
+    updateProgress(0, "Calculando...");
     const processedFilesElement = document.getElementById("processedFilesCount");
     if (processedFilesElement) {
       processedFilesElement.textContent = "0/" + data.totalFiles;
     }
   });
-  windowObj.logger.onFileProcessed((data: { 
-    file: string,
-    completed: number,
-    total: number,
-    tokens?: { sent: number, received: number },
-    fileSize?: { original: number, processed: number },
-    progress?: number
+
+  // Listener para atualizações de progresso da conversão
+  windowObj.electronAPI.onConversionProgress((data: {
+    status: string;
+    file?: string;
+    message?: string;
+    fileInfo?: string;
+    tokensInfo?: { sent: number, received: number };
+    fileSize?: { original: number, processed: number };
   }) => {
-    windowObj.processingCompletedFiles = data.completed;
-    if (data.tokens) {
-      windowObj.processingTokensTotal.sent += data.tokens.sent || 0;
-      windowObj.processingTokensTotal.received += data.tokens.received || 0;
-      processingTotalTokens.sent += data.tokens.sent || 0;
-      processingTotalTokens.received += data.tokens.received || 0;
+    // Atualizar contadores se for uma conversão completa
+    if (data.status === "converted" || data.status === "completed") {
+      completedFiles++;
+    }
+
+    // Atualizar tokens processados
+    if (data.tokensInfo) {
+      windowObj.processingTokensTotal.sent += data.tokensInfo.sent || 0;
+      windowObj.processingTokensTotal.received += data.tokensInfo.received || 0;
       const sentTokensElement = document.getElementById("sentTokens");
       const receivedTokensElement = document.getElementById("receivedTokens");
       if (sentTokensElement) {
-        sentTokensElement.textContent = processingTotalTokens.sent.toLocaleString();
+        sentTokensElement.textContent = windowObj.processingTokensTotal.sent.toLocaleString();
       }
       if (receivedTokensElement) {
-        receivedTokensElement.textContent = processingTotalTokens.received.toLocaleString();
+        receivedTokensElement.textContent = windowObj.processingTokensTotal.received.toLocaleString();
       }
     }
-    processingFilesDetails.push({
-      file: data.file,
-      tokensInfo: data.tokens,
-      fileSize: data.fileSize
-    });
-    const percent = Math.floor((data.completed / data.total) * 100);
-    const elapsedTime = Date.now() - processingStartTime;
-    const progressRatio = data.completed / data.total;
-    const estimatedTotalTime = elapsedTime / progressRatio;
-    const remainingTime = estimatedTotalTime - elapsedTime;
-    const timeEstimation = formatTime(remainingTime);
-    updateProgress(percent, timeEstimation);
-    const processedFilesElement = document.getElementById("processedFilesCount");
-    const conversionProcessedFilesElement = document.getElementById("conversionProcessedFiles");
-    if (processedFilesElement) {
-      processedFilesElement.textContent = `${data.completed}/${data.total}`;
+
+    // Atualizar mensagem de log com base no status
+    if (data.message) {
+      switch (data.status) {
+        case "converting":
+          logMessage(`ℹ️ ${data.message}`);
+          break;
+        case "completed":
+          logMessage(`✅ ${data.message}`);
+          break;
+        case "error":
+          logMessage(`❌ ${data.message}`);
+          break;
+        default:
+          if (data.file) {
+            let message = `📄 Processando: ${data.file}`;
+            if (data.fileInfo) {
+              message += ` | ${data.fileInfo}`;
+            }
+            logMessage(message);
+          }
+      }
     }
-    if (conversionProcessedFilesElement) {
-      conversionProcessedFilesElement.textContent = data.completed.toString();
+
+    // Atualizar progresso geral
+    if (totalFiles > 0) {
+      const percent = Math.floor((completedFiles / totalFiles) * 100);
+      const elapsedTime = Date.now() - processingStartTime;
+      const progressRatio = completedFiles / totalFiles;
+      const estimatedTotalTime = elapsedTime / progressRatio;
+      const remainingTime = estimatedTotalTime - elapsedTime;
+      const timeEstimation = formatTime(remainingTime);
+      
+      updateProgress(percent, timeEstimation);
+      
+      const processedFilesElement = document.getElementById("processedFilesCount");
+      const conversionProcessedFilesElement = document.getElementById("conversionProcessedFiles");
+      
+      if (processedFilesElement) {
+        processedFilesElement.textContent = `${completedFiles}/${totalFiles}`;
+      }
+      if (conversionProcessedFilesElement) {
+        conversionProcessedFilesElement.textContent = completedFiles.toString();
+      }
     }
-    let fileInfo = `Processed: ${data.file}`;
-    if (data.tokens) {
-      fileInfo += ` (Tokens - Sent: ${data.tokens.sent}, Received: ${data.tokens.received})`;
+
+    // Adicionar detalhes do arquivo processado
+    if (data.file && (data.tokensInfo || data.fileSize)) {
+      processingFilesDetails.push({
+        file: data.file,
+        tokensInfo: data.tokensInfo,
+        fileSize: data.fileSize
+      });
     }
-    if (data.fileSize) {
-      const originalSizeStr = formatBytes(data.fileSize.original);
-      const processedSizeStr = formatBytes(data.fileSize.processed);
-      fileInfo += ` | Size: ${originalSizeStr} → ${processedSizeStr}`;
-    }
-    logMessage(fileInfo);
-    addFileToProcessingDetails(data);
   });
+
   windowObj.logger.onProcessingComplete((data: { 
     totalTime: number,
     totalTokens: { sent: number, received: number },
     totalFiles?: number,
     totalSize?: { original: number, processed: number }
   }) => {
-    updateProgress(100, "Completed");
-    logMessage(`✅ Processing completed in ${formatTime(data.totalTime)}`);
+    updateProgress(100, "Concluído");
+    logMessage(`✅ Processamento concluído em ${formatTime(data.totalTime)}`);
     const totalSent = data.totalTokens.sent;
     const totalReceived = data.totalTokens.received;
-    logMessage(`📊 Total Tokens - Sent: ${totalSent}, Received: ${totalReceived}`);
+    logMessage(`📊 Total de Tokens - Enviados: ${totalSent.toLocaleString()}, Recebidos: ${totalReceived.toLocaleString()}`);
     if (data.totalSize) {
       const originalSizeStr = formatBytes(data.totalSize.original);
       const processedSizeStr = formatBytes(data.totalSize.processed);
       const sizeChangePercent = Math.round((data.totalSize.processed / data.totalSize.original) * 100);
-      logMessage(`📁 Total Size - Original: ${originalSizeStr}, Processed: ${processedSizeStr} (${sizeChangePercent}%)`);
+      logMessage(`📁 Tamanho Total - Original: ${originalSizeStr}, Processado: ${processedSizeStr} (${sizeChangePercent}%)`);
     }
-    const sentTokensElement = document.getElementById("sentTokens");
-    const receivedTokensElement = document.getElementById("receivedTokens");
-    const conversionProcessedFilesElement = document.getElementById("conversionProcessedFiles");
-    if (sentTokensElement) {
-      sentTokensElement.textContent = totalSent.toLocaleString();
-    }
-    if (receivedTokensElement) {
-      receivedTokensElement.textContent = totalReceived.toLocaleString();
-    }
-    if (conversionProcessedFilesElement && data.totalFiles) {
-      conversionProcessedFilesElement.textContent = data.totalFiles.toString();
-    }
-    const processingTimeElement = document.getElementById("processingTime");
-    if (processingTimeElement) {
-      processingTimeElement.textContent = formatTime(data.totalTime);
-    }
+    
     const nextButton = document.getElementById("nextStep4") as HTMLButtonElement;
     if (nextButton) {
       nextButton.disabled = false;

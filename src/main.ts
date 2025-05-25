@@ -193,7 +193,7 @@ function setupIpcHandlers() {
     }
   });
   // Handler for processing code
-  ipcMain.handle("process-code", async (_, options) => {
+  ipcMain.handle("process-code", async (_event, options) => {
     console.log(
       "Starting code processing with options:",
       JSON.stringify(options, null, 2)

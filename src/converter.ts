@@ -81,13 +81,13 @@ async function convertWithOpenAI(
     apiKey: options.apiKey,
   });
 
-  const prompt = createConversionPrompt(code, sourceLanguage, options.targetLanguage);
+  const prompt = createConversionPrompt(code, sourceLanguage, options.targetLanguage, options.customPrompt);
   const promptTokens = estimateTokenCount(prompt);
   const startTime = Date.now();
 
   try {
     const response = await client.chat.completions.create({
-      model: "gpt-4",
+      model: "gpt-4.1-nano",
       messages: [{ role: "user", content: prompt }],
       temperature: 0.2,
       max_tokens: 4000,
@@ -128,7 +128,7 @@ async function convertWithGemini(
   }
 
   const apiUrl = "https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent";
-  const prompt = createConversionPrompt(code, sourceLanguage, options.targetLanguage);
+  const prompt = createConversionPrompt(code, sourceLanguage, options.targetLanguage, options.customPrompt);
   const promptTokens = estimateTokenCount(prompt);
   const startTime = Date.now();
 
@@ -191,7 +191,7 @@ async function convertWithAnthropic(
     apiKey: options.apiKey,
   });
 
-  const prompt = createConversionPrompt(code, sourceLanguage, options.targetLanguage);
+  const prompt = createConversionPrompt(code, sourceLanguage, options.targetLanguage, options.customPrompt);
   const promptTokens = estimateTokenCount(prompt);
   const startTime = Date.now();
 
@@ -248,7 +248,7 @@ async function convertWithLLama(
   sourceLanguage: string,
   options: ConversionOptions
 ): Promise<ConversionResult> {
-  const prompt = createConversionPrompt(code, sourceLanguage, options.targetLanguage);
+  const prompt = createConversionPrompt(code, sourceLanguage, options.targetLanguage, options.customPrompt);
   const promptTokens = estimateTokenCount(prompt);
   const startTime = Date.now();
   
@@ -298,29 +298,23 @@ async function convertWithLLama(
 function createConversionPrompt(
   code: string,
   sourceLanguage: string,
-  targetLanguage: string
+  targetLanguage: string,
+  customPrompt?: string
 ): string {
-  return `
-# Instruções de Conversão de Código
+  if (!customPrompt) {
+    // Se não houver prompt customizado, use um prompt básico
+    return `Convert this ${sourceLanguage} code to ${targetLanguage}, maintaining functionality:
 
-- Linguagem de origem: ${sourceLanguage}
-- Linguagem de destino: ${targetLanguage}
-
-## Código original:
 \`\`\`${sourceLanguage}
 ${code}
-\`\`\`
+\`\`\``;
+  }
 
-## Diretrizes:
-1. Converta o código acima para ${targetLanguage}
-2. Mantenha a mesma funcionalidade e lógica
-3. Adapte para os padrões e melhores práticas de ${targetLanguage}
-4. Mantenha os nomes de variáveis e funções consistentes, a menos que violem convenções de ${targetLanguage}
-5. Inclua comentários importantes apenas onde necessário para explicar a conversão
-6. Não inclua texto explicativo antes ou depois do código
-
-Retorne apenas o código convertido em ${targetLanguage}, sem explicações adicionais.
-`;
+  // Substituir placeholders no prompt customizado
+  return customPrompt
+    .replace(/\{sourceLanguage\}/g, sourceLanguage)
+    .replace(/\{targetLanguage\}/g, targetLanguage)
+    .replace(/\{code\}/g, code);
 }
 
 /**

@@ -3,6 +3,7 @@ export interface ConversionOptions {
   provider: "openai" | "gemini" | "anthropic" | "llama" | "llama-local";
   apiKey?: string;
   apiUrl?: string;  // API URL for providers that require it
+  customPrompt?: string;  // Novo campo para o prompt customizado
 }
 
 export interface ProcessOptions {

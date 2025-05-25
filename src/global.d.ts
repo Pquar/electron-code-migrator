@@ -19,6 +19,14 @@ interface Window {
   electronAPI: {
     logMessage: (message: string) => void;
     onMigrationProgress: (callback: (message: string) => void) => void;
+    onConversionProgress: (callback: (data: {
+      status: string;
+      file?: string;
+      message?: string;
+      fileInfo?: string;
+      tokensInfo?: { sent: number; received: number };
+      fileSize?: { original: number; processed: number };
+    }) => void) => void;
   };  logger: {
     onLogUpdate: (callback: (data: { type: string; message: string }) => void) => void;
     

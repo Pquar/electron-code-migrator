@@ -74,9 +74,7 @@ async function getLlamaModel(modelName?: string): Promise<LLama<LLamaCpp>> {
 
   try {
     console.log("Starting LLama model loading...");
-    const modelPath = await getLlamaModelPath(
-      modelName || ModelPaths.mistral
-    );
+    const modelPath = await getLlamaModelPath(modelName || ModelPaths.mistral);
     console.log("Model path:", modelPath);
 
     if (!fs.existsSync(modelPath)) {
@@ -168,9 +166,24 @@ export async function llamaApiConvert(
   apiUrl: string,
   apiKey: string
 ): Promise<string> {
-  console.log("Starting LLama API call...");
+  console.log("Starting LLama API call..." + prompt);
+  process.send?.({
+    type: "conversion-progress",
+    data: {
+      status: "converting",
+      message: "Iniciando chamada à API Llama...",
+    },
+  });
 
   try {
+    process.send?.({
+      type: "conversion-progress",
+      data: {
+        status: "converting",
+        message: "Enviando requisição para a API Llama...",
+      },
+    });
+
     const response = await axios.post(
       apiUrl,
       {
@@ -192,6 +205,14 @@ export async function llamaApiConvert(
       throw new Error("Empty API response");
     }
 
+    process.send?.({
+      type: "conversion-progress",
+      data: {
+        status: "converting",
+        message: "Processando resposta da API Llama...",
+      },
+    });
+
     // Try to get the result from the response in different common API formats
     let output = "";
     if (response.data.completion) {
@@ -207,8 +228,6 @@ export async function llamaApiConvert(
       output = response.data.text;
     } else if (response.data.output) {
       output = response.data.output;
-    } else if (response.data.text) {
-      output = response.data.text;
     } else if (typeof response.data === "string") {
       output = response.data;
     } else {
@@ -217,6 +236,14 @@ export async function llamaApiConvert(
 
     // Clean code markings and explanatory text
     output = output.replace(/```[\w]*\n?/g, "").replace(/```$/g, "");
+
+    process.send?.({
+      type: "conversion-progress",
+      data: {
+        status: "converting",
+        message: "Limpando e formatando o código convertido...",
+      },
+    });
 
     // Try to extract only the code, removing explanatory text
     const codeMatch = output.match(
@@ -231,9 +258,24 @@ export async function llamaApiConvert(
       throw new Error("The API returned an empty response after processing");
     }
 
+    process.send?.({
+      type: "conversion-progress",
+      data: {
+        status: "completed",
+        message: "Código convertido com sucesso via API Llama",
+      },
+    });
+
     console.log("Code successfully converted via LLama API");
     return trimmedOutput;
   } catch (error: any) {
+    process.send?.({
+      type: "conversion-progress",
+      data: {
+        status: "error",
+        message: `Erro na conversão via API Llama: ${error.message}`,
+      },
+    });
     console.error("Error in LLama API conversion:", error);
     throw new Error(`Error in LLama API conversion: ${error.message}`);
   }
@@ -299,10 +341,13 @@ export async function minifyFiles(options: ProcessOptions): Promise<{
   await fs.ensureDir(tempFolder);
   // Get list of files in the source folder
   const sourceFiles = await getAllFiles(sourceFolder);
-  
+
   // Send total file count for progress tracking
-  process.send?.({ type: 'minification-file-count', count: sourceFiles.length });
-  
+  process.send?.({
+    type: "minification-file-count",
+    count: sourceFiles.length,
+  });
+
   const minifiedFiles: Array<{
     original: string;
     minified: string;
@@ -346,7 +391,7 @@ export async function minifyFiles(options: ProcessOptions): Promise<{
       totalMinifiedTokens += minifiedTokenCount;
 
       // Write simplified content to temporary file
-      await fs.writeFile(tempFilePath, minifiedContent);      // Add to processed files list with metrics
+      await fs.writeFile(tempFilePath, minifiedContent); // Add to processed files list with metrics
       minifiedFiles.push({
         original: filePath,
         minified: tempFilePath,
@@ -354,23 +399,27 @@ export async function minifyFiles(options: ProcessOptions): Promise<{
         minifiedTokens: minifiedTokenCount,
         originalSize: formatFileSize(originalSize),
         minifiedSize: formatFileSize(minifiedSize),
-      });      // Emit progress to the interface
+      }); // Emit progress to the interface
       const progress = {
         file: relativePath,
         tokens: {
           before: originalTokenCount,
-          after: minifiedTokenCount
+          after: minifiedTokenCount,
         },
         size: {
           before: formatFileSize(originalSize),
           after: formatFileSize(minifiedSize),
           beforeBytes: originalSize,
-          afterBytes: minifiedSize
+          afterBytes: minifiedSize,
         },
-        fileInfo: `${path.extname(filePath)} | ${path.basename(filePath)} | Reduction: ${Math.round((1 - minifiedSize / originalSize) * 100)}%`
+        fileInfo: `${path.extname(filePath)} | ${path.basename(
+          filePath
+        )} | Reduction: ${Math.round(
+          (1 - minifiedSize / originalSize) * 100
+        )}%`,
       };
-      
-      process.send?.({ type: 'minification-progress', data: progress });
+
+      process.send?.({ type: "minification-progress", data: progress });
     } catch (error) {
       console.error(`Error minifying file ${filePath}:`, error);
     }
@@ -409,10 +458,10 @@ export async function processFiles(options: ProcessOptions): Promise<{
   await fs.ensureDir(outputFolder);
   // Step 2: Copy files from base folder to temporary folder with simplifications
   const sourceFiles = await getAllFiles(sourceFolder);
-  
+
   // Send total file count for progress tracking
-  process.send?.({ type: 'file-count', count: sourceFiles.length });
-  
+  process.send?.({ type: "file-count", count: sourceFiles.length });
+
   const processedFiles = [];
 
   for (const filePath of sourceFiles) {
@@ -427,15 +476,18 @@ export async function processFiles(options: ProcessOptions): Promise<{
         content,
         path.extname(filePath),
         simplificationOptions
-      );      await fs.writeFile(tempFilePath, content);
-      processedFiles.push({ original: filePath, simplified: tempFilePath });      // Emit progress to the interface
-      process.send?.({ 
-        type: 'conversion-progress', 
-        data: { 
-          status: 'simplified',
+      );
+      await fs.writeFile(tempFilePath, content);
+      processedFiles.push({ original: filePath, simplified: tempFilePath }); // Emit progress to the interface
+      process.send?.({
+        type: "conversion-progress",
+        data: {
+          status: "simplified",
           file: relativePath,
-          fileInfo: `${formatFileSize(Buffer.byteLength(content, "utf-8"))} | ${estimateTokenCount(content)} tokens`
-        }
+          fileInfo: `${formatFileSize(
+            Buffer.byteLength(content, "utf-8")
+          )} | ${estimateTokenCount(content)} tokens`,
+        },
       });
     } catch (error) {
       console.error(`Error processing file ${filePath}:`, error);
@@ -453,13 +505,14 @@ export async function processFiles(options: ProcessOptions): Promise<{
         getConvertedFilename(relativePath, conversionOptions.targetLanguage)
       );
 
-      await fs.ensureDir(path.dirname(outputFilePath));      const content = await fs.readFile(file.simplified, "utf-8");
+      await fs.ensureDir(path.dirname(outputFilePath));
+      const content = await fs.readFile(file.simplified, "utf-8");
       const conversionResult = await convertCode(
         content,
         path.extname(file.simplified),
         conversionOptions
       );
-      
+
       // Extract converted code from result
       const convertedContent = conversionResult.code;
 
@@ -467,33 +520,33 @@ export async function processFiles(options: ProcessOptions): Promise<{
       convertedFiles.push({
         simplified: file.simplified,
         converted: outputFilePath,
-        metrics: conversionResult.metrics
+        metrics: conversionResult.metrics,
       });
-      
+
       // Get token metrics from conversion
       const tokensInfo = conversionResult.metrics?.tokens || {
         sent: estimateTokenCount(content),
-        received: estimateTokenCount(convertedContent)
+        received: estimateTokenCount(convertedContent),
       };
-        const originalSizeBytes = Buffer.byteLength(content, "utf-8");
+      const originalSizeBytes = Buffer.byteLength(content, "utf-8");
       const convertedSizeBytes = Buffer.byteLength(convertedContent, "utf-8");
       const fileSize = formatFileSize(convertedSizeBytes);
       const processingTime = conversionResult.metrics?.processingTime || 0;
-      
+
       // Emit progress to the interface
       process.send?.({
-        type: 'conversion-progress',
+        type: "conversion-progress",
         data: {
-          status: 'converted',
+          status: "converted",
           file: relativePath,
           output: path.basename(outputFilePath),
           fileInfo: `${fileSize} | ${tokensInfo.received} tokens | Time: ${processingTime}ms`,
           tokensInfo: tokensInfo,
           fileSize: {
             original: originalSizeBytes,
-            processed: convertedSizeBytes
-          }
-        }
+            processed: convertedSizeBytes,
+          },
+        },
       });
     } catch (error) {
       console.error(`Error converting file ${file.simplified}:`, error);
@@ -614,11 +667,17 @@ export async function createFolder(folderPath: string): Promise<void> {
   await fs.ensureDir(folderPath);
 }
 
-export async function moveFileOrFolder(src: string, dest: string): Promise<void> {
+export async function moveFileOrFolder(
+  src: string,
+  dest: string
+): Promise<void> {
   await fs.move(src, dest, { overwrite: true });
 }
 
-export async function renameFileOrFolder(oldPath: string, newPath: string): Promise<void> {
+export async function renameFileOrFolder(
+  oldPath: string,
+  newPath: string
+): Promise<void> {
   await fs.move(oldPath, newPath, { overwrite: true });
 }
 
@@ -626,18 +685,21 @@ export async function deleteFileOrFolder(targetPath: string): Promise<void> {
   await fs.remove(targetPath);
 }
 
-export async function writeFile(targetPath: string, content: string): Promise<void> {
+export async function writeFile(
+  targetPath: string,
+  content: string
+): Promise<void> {
   await fs.ensureDir(path.dirname(targetPath));
-  await fs.writeFile(targetPath, content, 'utf-8');
+  await fs.writeFile(targetPath, content, "utf-8");
 }
 
 export async function readFile(targetPath: string): Promise<string> {
-  return await fs.readFile(targetPath, 'utf-8');
+  return await fs.readFile(targetPath, "utf-8");
 }
 
 // Interface for AI agent suggestions
 export interface AgentSuggestion {
-  type: 'move' | 'rename' | 'create' | 'delete' | 'modify';
+  type: "move" | "rename" | "create" | "delete" | "modify";
   description: string;
   path?: string;
   destination?: string;
@@ -659,90 +721,109 @@ export async function analyzeCodeWithAgent(
   const suggestions: AgentSuggestion[] = [];
 
   // Prepare a summary of files to send to the AI
-  const filesSummary = await Promise.all(files.map(async (file) => {
-    const relativePath = path.relative(outputFolder, file.converted);
-    const content = await fs.readFile(file.converted, 'utf-8');
-    // Get only the first lines to save tokens
-    const preview = content.split('\n').slice(0, 10).join('\n');
-    return { path: relativePath, preview };
-  }));
+  const filesSummary = await Promise.all(
+    files.map(async (file) => {
+      const relativePath = path.relative(outputFolder, file.converted);
+      const content = await fs.readFile(file.converted, "utf-8");
+      // Get only the first lines to save tokens
+      const preview = content.split("\n").slice(0, 10).join("\n");
+      return { path: relativePath, preview };
+    })
+  );
 
   // Build the prompt for the AI
   const prompt = `
-You are an assistant specialized in organizing code. Analyze the converted files for ${conversionOptions.targetLanguage} and suggest reorganizations that make the project cleaner and well-structured.
+You are an assistant specialized in organizing code. Analyze the converted files for ${
+    conversionOptions.targetLanguage
+  } and suggest reorganizations that make the project cleaner and well-structured.
 
-Suggestions may include:
-1. Moving files to more appropriate folders
-2. Renaming files to more descriptive names
-3. Creating new folders to group related files
-4. Deleting temporary or unnecessary files
-5. Modifying file content to fix compatibility issues
+IMPORTANT: You must respond ONLY with a valid JSON array containing suggestions. Do not include any explanatory text outside the JSON.
+
+Each suggestion in the array must follow this exact structure:
+{
+  "type": "move" | "rename" | "create" | "delete" | "modify",
+  "description": "string describing the action",
+  "path": "path/to/file" (optional for create type),
+  "destination": "new/path" (required for move type),
+  "newName": "new-name.ext" (required for rename type),
+  "content": "new content" (required for modify type)
+}
 
 List of converted files:
 ${JSON.stringify(filesSummary, null, 2)}
 
-Provide your suggestions in JSON format with this structure:
-[
-  {
-    "type": "move",
-    "description": "Move file X to folder Y for better organization",
-    "path": "path/to/file",
-    "destination": "new/path"
-  },
-  {
-    "type": "rename",
-    "description": "Rename file to more descriptive name",
-    "path": "path/to/file",
-    "newName": "new-name.ext"
-  },
-  {
-    "type": "create",
-    "description": "Create new folder to group related files",
-    "path": "new/folder"
-  },
-  {
-    "type": "delete",
-    "description": "Delete temporary file",
-    "path": "path/to/file/temp"
-  },
-  {
-    "type": "modify",
-    "description": "Fix compatibility issue",
-    "path": "path/to/file",
-    "content": "new content"
-  }
-]
+Remember:
+1. Response must be a single JSON array containing up to 5 suggestions
+2. Each suggestion must have all required fields for its type
+3. Do not include any text outside the JSON array
+4. JSON must be properly formatted and valid
+5. Prioritize the most important suggestions
 
-Limit to a maximum of 5 suggestions, prioritizing the most important ones.
+Example of valid response format:
+[{"type":"move","description":"Move utilities to dedicated folder","path":"utils.ts","destination":"utils/utils.ts"}]
 `;
 
   try {
     // Choose AI API based on configured options
     let aiResponse: string;
-    
-    if (conversionOptions.provider === "openai" || conversionOptions.provider === "gemini" || conversionOptions.provider === "anthropic") {
+
+    if (
+      conversionOptions.provider === "openai" ||
+      conversionOptions.provider === "gemini" ||
+      conversionOptions.provider === "anthropic"
+    ) {
       // Use external APIs for more sophisticated analysis
-      aiResponse = await llamaApiConvert(prompt, conversionOptions.apiUrl || "", conversionOptions.apiKey || "");
+      aiResponse = await llamaApiConvert(
+        prompt,
+        conversionOptions.apiUrl || "",
+        conversionOptions.apiKey || ""
+      );
     } else {
       // Use local Llama as fallback
-      aiResponse = await llamaApiConvert(prompt, "http://127.0.0.1:11434/api/generate", "test");
+      aiResponse = await llamaApiConvert(
+        prompt,
+        "http://127.0.0.1:11434/api/generate",
+        "test"
+      );
     }
-      // Extract JSON from response
-    const jsonMatch = aiResponse.match(/\[\s*\{[\s\S]*\}\s*\]/);
+
+    // Extract JSON from response using improved matching
+    const jsonMatch = aiResponse.match(
+      /\[(?:[^[\]]*|\[(?:[^[\]]*|\[[^[\]]*\])*\])*\]/
+    );
     if (jsonMatch) {
       try {
+        // Attempt to parse the matched JSON
         const parsedSuggestions = JSON.parse(jsonMatch[0]) as AgentSuggestion[];
-        return parsedSuggestions.filter(s => 
-          s.type && 
-          s.description && 
-          (s.path || s.type === 'create')
-        );
+
+        // Validate each suggestion has required fields based on its type
+        return parsedSuggestions
+          .filter((s) => {
+            if (!s.type || !s.description) return false;
+
+            switch (s.type) {
+              case "move":
+                return !!s.path && !!s.destination;
+              case "rename":
+                return !!s.path && !!s.newName;
+              case "create":
+                return !!s.path;
+              case "delete":
+                return !!s.path;
+              case "modify":
+                return !!s.path && !!s.content;
+              default:
+                return false;
+            }
+          })
+          .slice(0, 5); // Limit to 5 suggestions
       } catch (parseError) {
         console.error("Error parsing JSON suggestions:", parseError);
         return [];
       }
     }
-    
+
+    console.error("No valid JSON array found in AI response");
     return [];
   } catch (error) {
     console.error("Error analyzing code with AI agent:", error);
@@ -759,13 +840,15 @@ Limit to a maximum of 5 suggestions, prioritizing the most important ones.
 export async function executeAgentSuggestions(
   suggestions: AgentSuggestion[],
   outputFolder: string
-): Promise<Array<{ suggestion: AgentSuggestion; success: boolean; error?: string }>> {
+): Promise<
+  Array<{ suggestion: AgentSuggestion; success: boolean; error?: string }>
+> {
   const results = [];
-  
+
   for (const suggestion of suggestions) {
     try {
       switch (suggestion.type) {
-        case 'move':
+        case "move":
           if (suggestion.path && suggestion.destination) {
             const src = path.join(outputFolder, suggestion.path);
             const dest = path.join(outputFolder, suggestion.destination);
@@ -774,33 +857,36 @@ export async function executeAgentSuggestions(
             results.push({ suggestion, success: true });
           }
           break;
-          
-        case 'rename':
+
+        case "rename":
           if (suggestion.path && suggestion.newName) {
             const oldPath = path.join(outputFolder, suggestion.path);
-            const newPath = path.join(path.dirname(oldPath), suggestion.newName);
+            const newPath = path.join(
+              path.dirname(oldPath),
+              suggestion.newName
+            );
             await renameFileOrFolder(oldPath, newPath);
             results.push({ suggestion, success: true });
           }
           break;
-          
-        case 'create':
+
+        case "create":
           if (suggestion.path) {
             const dirPath = path.join(outputFolder, suggestion.path);
             await createFolder(dirPath);
             results.push({ suggestion, success: true });
           }
           break;
-          
-        case 'delete':
+
+        case "delete":
           if (suggestion.path) {
             const targetPath = path.join(outputFolder, suggestion.path);
             await deleteFileOrFolder(targetPath);
             results.push({ suggestion, success: true });
           }
           break;
-          
-        case 'modify':
+
+        case "modify":
           if (suggestion.path && suggestion.content) {
             const filePath = path.join(outputFolder, suggestion.path);
             await writeFile(filePath, suggestion.content);
@@ -809,13 +895,13 @@ export async function executeAgentSuggestions(
           break;
       }
     } catch (error: any) {
-      results.push({ 
-        suggestion, 
-        success: false, 
-        error: error.message 
+      results.push({
+        suggestion,
+        success: false,
+        error: error.message,
       });
     }
   }
-  
+
   return results;
 }

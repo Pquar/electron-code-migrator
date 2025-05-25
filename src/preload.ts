@@ -37,6 +37,16 @@ contextBridge.exposeInMainWorld("electronAPI", {
   onMigrationProgress: (callback: (message: string) => void) => {
     ipcRenderer.on("migration:progress", (_, message) => callback(message));
   },
+  onConversionProgress: (callback: (data: {
+    status: string;
+    file?: string;
+    message?: string;
+    fileInfo?: string;
+    tokensInfo?: { sent: number; received: number };
+    fileSize?: { original: number; processed: number };
+  }) => void) => {
+    ipcRenderer.on('conversion-progress', (_event, data) => callback(data));
+  },
 });
 
 // Expose log events

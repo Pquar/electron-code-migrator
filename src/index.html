@@ -180,23 +180,34 @@
                 </select>
               </div>
 
-              <div>
-                <label class="block text-sm font-medium mb-1">Target Language</label>
-                <select
-                  id="targetLanguage"
-                  class="w-full border border-gray-300 rounded px-4 py-2"
-                >
-                  <option value="javascript">JavaScript</option>
-                  <option value="typescript">TypeScript</option>
-                  <option value="python">Python</option>
-                  <option value="java">Java</option>
-                  <option value="csharp">C#</option>
-                  <option value="cpp">C++</option>
-                  <option value="ruby">Ruby</option>
-                  <option value="go">Go</option>
-                  <option value="rust">Rust</option>
-                  <option value="php">PHP</option>
-                </select>
+              <div class="mb-6">
+                <label class="block text-sm font-medium mb-1">Linguagem de Destino</label>
+                <div class="flex gap-2">
+                  <select
+                    id="targetLanguage"
+                    class="w-3/4 border border-gray-300 rounded px-4 py-2"
+                  >
+                    <option value="">Selecione a linguagem</option>
+                    <option value="javascript">JavaScript</option>
+                    <option value="typescript">TypeScript</option>
+                    <option value="python">Python</option>
+                    <option value="java">Java</option>
+                    <option value="csharp">C#</option>
+                    <option value="cpp">C++</option>
+                    <option value="ruby">Ruby</option>
+                    <option value="go">Go</option>
+                    <option value="rust">Rust</option>
+                    <option value="php">PHP</option>
+                    <option value="kotlin">Kotlin</option>
+                    <option value="swift">Swift</option>
+                  </select>
+                  <input
+                    type="text"
+                    id="customLanguage"
+                    class="w-1/4 border border-gray-300 rounded px-4 py-2"
+                    placeholder="Linguagem personalizada"
+                  />
+                </div>
               </div>
             </div>
 
@@ -208,16 +219,32 @@
                 class="w-full border border-gray-300 rounded px-4 py-2"
                 placeholder="Enter your API key"
               />
-            </div>
-
-            <div class="mt-4" id="apiUrlContainer" style="display: none">
+            </div>            <div class="mt-4" id="apiUrlContainer" style="display: none">
               <label class="block text-sm font-medium mb-1">API URL</label>
               <input
                 type="text"
                 id="apiUrl"
                 class="w-full border border-gray-300 rounded px-4 py-2"
                 placeholder="Enter Llama API URL"
+                value="http://127.0.0.1:11434/api/generate"
               />
+            </div>
+
+            <div class="mt-6 mb-4" id="customPromptContainer">
+              <label class="block text-sm font-medium mb-2">Prompt de Conversão</label>
+              <div class="flex flex-col">
+                <textarea
+                  id="conversionPrompt"
+                  class="w-full h-64 font-mono text-sm border border-gray-300 rounded px-4 py-2"
+                  placeholder="Digite o prompt personalizado para a conversão..."
+                ></textarea>
+                <button
+                  id="resetPrompt"
+                  class="mt-2 text-blue-600 hover:text-blue-800 text-sm font-medium self-end"
+                >
+                  Restaurar prompt padrão
+                </button>
+              </div>
             </div>
           </div>
 

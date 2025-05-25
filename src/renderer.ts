@@ -7,6 +7,26 @@ window.processingCompletedFiles = 0;
 window.processingStartTimeEstimation = 0;
 window.processingTokensTotal = { sent: 0, received: 0 };
 
+const defaultPrompt = `# Instruções de Conversão de Código
+
+- Linguagem de origem: {sourceLanguage}
+- Linguagem de destino: {targetLanguage}
+
+## Código original:
+\`\`\`{sourceLanguage}
+{code}
+\`\`\`
+
+## Diretrizes:
+1. Converta o código acima para {targetLanguage}
+2. Mantenha a mesma funcionalidade e lógica
+3. Adapte para os padrões e melhores práticas de {targetLanguage}
+4. Mantenha os nomes de variáveis e funções consistentes, a menos que violem convenções de {targetLanguage}
+5. Inclua comentários importantes apenas onde necessário para explicar a conversão
+6. Não inclua texto explicativo antes ou depois do código
+
+Retorne apenas o código convertido em {targetLanguage}, sem explicações adicionais.`;
+
 document.addEventListener("DOMContentLoaded", () => {
   let currentStep = 1;
   const totalSteps = 5;
@@ -30,6 +50,7 @@ document.addEventListener("DOMContentLoaded", () => {
       provider: "openai",
       apiKey: "",
       apiUrl: "",
+      customPrompt: defaultPrompt,
     },
   };
   // Selecionadores de elementos
@@ -175,18 +196,74 @@ document.addEventListener("DOMContentLoaded", () => {
     
     // Mostrar/esconder o campo de URL da API para o Llama
     const apiUrlContainer = document.getElementById("apiUrlContainer");
+    const customPromptContainer = document.getElementById("customPromptContainer");
     if (apiUrlContainer) {
       apiUrlContainer.style.display = provider === "llama" ? "block" : "none";
+    }
+    if (customPromptContainer) {
+      customPromptContainer.style.display = "block";
     }
     
     validateStep2();
   });
 
   document.getElementById("targetLanguage")?.addEventListener("change", (e) => {
-    formData.conversionOptions.targetLanguage = (
-      e.target as HTMLSelectElement
-    ).value;
+    const value = (e.target as HTMLSelectElement).value;
+    formData.conversionOptions.targetLanguage = value;
+    
+    // Mostrar campo de prompt personalizado
+    const customPromptContainer = document.getElementById("customPromptContainer");
+    if (customPromptContainer) {
+      customPromptContainer.style.display = "block";
+    }
+    showCustomPrompt();
   });
+
+  document.getElementById("customLanguage")?.addEventListener("input", (e) => {
+    const value = (e.target as HTMLInputElement).value;
+    if (value) {
+      const targetLanguageSelect = document.getElementById("targetLanguage") as HTMLSelectElement;
+      if (targetLanguageSelect) {
+        targetLanguageSelect.value = "";
+      }
+      formData.conversionOptions.targetLanguage = value.toLowerCase();
+    }
+    
+    // Mostrar campo de prompt personalizado
+    const customPromptContainer = document.getElementById("customPromptContainer");
+    if (customPromptContainer) {
+      customPromptContainer.style.display = "block";
+    }
+    showCustomPrompt();
+  });
+
+  // Função para mostrar e atualizar o prompt personalizado
+  function showCustomPrompt() {
+    const promptTextarea = document.getElementById("conversionPrompt") as HTMLTextAreaElement;
+    if (!promptTextarea) return;
+
+    // Atualizar o prompt com a linguagem selecionada
+    let updatedPrompt = defaultPrompt
+      .replace(/\{sourceLanguage\}/g, "detecção automática")
+      .replace(/\{targetLanguage\}/g, formData.conversionOptions.targetLanguage);
+
+    promptTextarea.value = updatedPrompt;
+    formData.conversionOptions.customPrompt = updatedPrompt;
+  }
+
+  // Event listener para o prompt personalizado
+  document.getElementById("conversionPrompt")?.addEventListener("input", (e) => {
+    formData.conversionOptions.customPrompt = (e.target as HTMLTextAreaElement).value;
+  });
+
+  // Event listener para resetar o prompt
+  document.getElementById("resetPrompt")?.addEventListener("click", () => {
+    const promptTextarea = document.getElementById("conversionPrompt") as HTMLTextAreaElement;
+    if (promptTextarea) {
+      showCustomPrompt();
+    }
+  });
+
   document.getElementById("apiKey")?.addEventListener("input", (e) => {
     formData.conversionOptions.apiKey = (e.target as HTMLInputElement).value;
     validateStep2();
@@ -235,14 +312,28 @@ document.addEventListener("DOMContentLoaded", () => {
     
     const needsApiUrl = formData.conversionOptions.provider === "llama";
     
+    const hasTargetLanguage = Boolean(formData.conversionOptions.targetLanguage);
+    
     const isValid = Boolean(
       formData.tempFolder &&
         formData.outputFolder &&
+        hasTargetLanguage &&
         (!needsApiKey || formData.conversionOptions.apiKey) &&
         (!needsApiUrl || formData.conversionOptions.apiUrl)
     );
     
     nextButton.disabled = !isValid;
+
+    // Mostrar o prompt personalizado se uma linguagem estiver selecionada
+    const customPromptContainer = document.getElementById("customPromptContainer");
+    if (customPromptContainer) {
+      customPromptContainer.style.display = hasTargetLanguage ? "block" : "none";
+    }
+    
+    // Se tiver linguagem selecionada, atualizar o prompt
+    if (hasTargetLanguage) {
+      showCustomPrompt();
+    }
   }
 
   // Função para navegar entre as etapas
