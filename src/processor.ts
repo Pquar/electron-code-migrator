@@ -4,6 +4,7 @@ import { promisify } from "util";
 import { simplifyCode } from "./simplifier";
 import { convertCode } from "./converter";
 import { LLama } from "llama-node";
+import { OpenAI } from "openai"
 import { LLamaCpp, LoadConfig } from "llama-node/dist/llm/llama-cpp.js";
 import {
   ConversionOptions,
@@ -171,7 +172,7 @@ export async function llamaApiConvert(
     type: "conversion-progress",
     data: {
       status: "converting",
-      message: "Iniciando chamada à API Llama...",
+      message: "Starting Llama API call...",
     },
   });
 
@@ -180,7 +181,7 @@ export async function llamaApiConvert(
       type: "conversion-progress",
       data: {
         status: "converting",
-        message: "Enviando requisição para a API Llama...",
+        message: "Sending request to Llama API...",
       },
     });
 
@@ -209,7 +210,7 @@ export async function llamaApiConvert(
       type: "conversion-progress",
       data: {
         status: "converting",
-        message: "Processando resposta da API Llama...",
+        message: "Processing Llama API response...",
       },
     });
 
@@ -241,7 +242,7 @@ export async function llamaApiConvert(
       type: "conversion-progress",
       data: {
         status: "converting",
-        message: "Limpando e formatando o código convertido...",
+        message: "Cleaning and formatting converted code...",
       },
     });
 
@@ -262,7 +263,7 @@ export async function llamaApiConvert(
       type: "conversion-progress",
       data: {
         status: "completed",
-        message: "Código convertido com sucesso via API Llama",
+        message: "Code successfully converted via Llama API",
       },
     });
 
@@ -273,7 +274,7 @@ export async function llamaApiConvert(
       type: "conversion-progress",
       data: {
         status: "error",
-        message: `Erro na conversão via API Llama: ${error.message}`,
+        message: `Error in Llama API conversion: ${error.message}`,
       },
     });
     console.error("Error in LLama API conversion:", error);
@@ -713,6 +714,83 @@ export interface AgentSuggestion {
  * @param files List of converted files
  * @returns Reorganization suggestions
  */
+async function analyzeWithProvider(
+  prompt: string,
+  provider: string,
+  apiKey: string = "",
+  apiUrl: string = ""
+): Promise<string> {
+  switch (provider) {
+    case "openai":
+      return callOpenAI(prompt, apiKey);
+    case "gemini":
+      return callGemini(prompt, apiKey);
+    case "anthropic":
+      return callAnthropic(prompt, apiKey); 
+    case "llama":
+      return llamaApiConvert(prompt, apiUrl || "http://127.0.0.1:11434/api/generate", apiKey);
+    case "llama-local":
+      return llamaApiConvert(prompt, "http://127.0.0.1:11434/api/generate", "test");
+    default:
+      throw new Error(`Provider ${provider} não suportado`);
+  }
+}
+
+async function callOpenAI(prompt: string, apiKey: string): Promise<string> {
+
+  if (!apiKey) {
+    throw new Error("OpenAI API Key not provided");
+  }
+
+  const client = new OpenAI({
+    apiKey: apiKey,
+  });
+  const response = await client.chat.completions.create({
+      model: "gpt-4.1-nano",
+      messages: [{ role: "user", content: prompt }],
+      temperature: 0.2,
+      max_tokens: 4000,
+    });
+
+
+   const data = response.choices[0]?.message?.content || prompt;
+  return data;
+}
+
+async function callGemini(prompt: string, apiKey: string): Promise<string> {
+  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`, {
+    method: "POST", 
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      contents: [{parts: [{text: prompt}]}],
+    })
+  });
+
+  const data = await response.json();
+  return data.candidates[0].content.parts[0].text;
+}
+
+async function callAnthropic(prompt: string, apiKey: string): Promise<string> {
+  const response = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "x-api-key": apiKey,
+      "anthropic-version": "2023-06-01",
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      model: "claude-3-opus-20240229",
+      max_tokens: 4096,
+      messages: [{role: "user", content: prompt}]
+    })
+  });
+
+  const data = await response.json();
+  return data.content[0].text;
+}
+
 export async function analyzeCodeWithAgent(
   options: ProcessOptions,
   files: Array<{ simplified: string; converted: string }>
@@ -763,29 +841,13 @@ Example of valid response format:
 [{"type":"move","description":"Move utilities to dedicated folder","path":"utils.ts","destination":"utils/utils.ts"}]
 `;
 
-  try {
-    // Choose AI API based on configured options
-    let aiResponse: string;
-
-    if (
-      conversionOptions.provider === "openai" ||
-      conversionOptions.provider === "gemini" ||
-      conversionOptions.provider === "anthropic"
-    ) {
-      // Use external APIs for more sophisticated analysis
-      aiResponse = await llamaApiConvert(
-        prompt,
-        conversionOptions.apiUrl || "",
-        conversionOptions.apiKey || ""
-      );
-    } else {
-      // Use local Llama as fallback
-      aiResponse = await llamaApiConvert(
-        prompt,
-        "http://127.0.0.1:11434/api/generate",
-        "test"
-      );
-    }
+  try {    // Get response from selected provider
+    const aiResponse = await analyzeWithProvider(
+      prompt,
+      conversionOptions.provider,
+      conversionOptions.apiKey,
+      conversionOptions.apiUrl
+    );
 
     // Extract JSON from response using improved matching
     const jsonMatch = aiResponse.match(

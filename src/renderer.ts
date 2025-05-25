@@ -1,31 +1,31 @@
 console.log("Renderer script loaded");
-// Removendo o import e usando função global que será definida em event-handlers.js
+// Removed the import and using a global function that will be defined in event-handlers.js
 
-// Inicializando propriedades globais
+// Initializing global properties
 window.processingTotalFiles = 0;
 window.processingCompletedFiles = 0;
 window.processingStartTimeEstimation = 0;
 window.processingTokensTotal = { sent: 0, received: 0 };
 
-const defaultPrompt = `# Instruções de Conversão de Código
+const defaultPrompt = `# Code Conversion Instructions
 
-- Linguagem de origem: {sourceLanguage}
-- Linguagem de destino: {targetLanguage}
+- Source language: {sourceLanguage}
+- Target language: {targetLanguage}
 
-## Código original:
+## Original code:
 \`\`\`{sourceLanguage}
 {code}
 \`\`\`
 
-## Diretrizes:
-1. Converta o código acima para {targetLanguage}
-2. Mantenha a mesma funcionalidade e lógica
-3. Adapte para os padrões e melhores práticas de {targetLanguage}
-4. Mantenha os nomes de variáveis e funções consistentes, a menos que violem convenções de {targetLanguage}
-5. Inclua comentários importantes apenas onde necessário para explicar a conversão
-6. Não inclua texto explicativo antes ou depois do código
+## Guidelines:
+1. Convert the code above to {targetLanguage}
+2. Keep the same functionality and logic
+3. Adapt to the standards and best practices of {targetLanguage}
+4. Keep variable and function names consistent unless they violate {targetLanguage} conventions
+5. Include important comments only where necessary to explain the conversion
+6. Do not include explanatory text before or after the code
 
-Retorne apenas o código convertido em {targetLanguage}, sem explicações adicionais.`;
+Return only the converted code in {targetLanguage}, with no additional explanations.`;
 
 document.addEventListener("DOMContentLoaded", () => {
   let currentStep = 1;
@@ -35,7 +35,7 @@ document.addEventListener("DOMContentLoaded", () => {
   let processingResults: any = null;
   let minificationResults: any = null;
 
-  // Dados do formulário
+  // Form data
   const formData = {
     sourceFolder: "",
     tempFolder: "",
@@ -53,7 +53,7 @@ document.addEventListener("DOMContentLoaded", () => {
       customPrompt: defaultPrompt,
     },
   };
-  // Selecionadores de elementos
+  // Element selectors
   const stepIndicators: Record<number, HTMLElement | null> = {
     1: document.getElementById("step1-indicator"),
     2: document.getElementById("step2-indicator"),
@@ -76,7 +76,7 @@ document.addEventListener("DOMContentLoaded", () => {
     3: document.getElementById("line3"),
     4: document.getElementById("line4"),
   };
-  // Botões de navegação
+  // Navigation buttons
   document
     .getElementById("nextStep1")
     ?.addEventListener("click", () => navigateToStep(2));
@@ -105,24 +105,24 @@ document.addEventListener("DOMContentLoaded", () => {
     .getElementById("startNew")
     ?.addEventListener("click", resetApplication);
 
-  // Botões de seleção de pastas
+  // Folder selection buttons
   document
     .getElementById("selectSourceFolder")
     ?.addEventListener("click", async () => {
       try {
-        console.log("Selecionando pasta de origem...");
+        console.log("Selecting source folder...");
         const folder = await window.api.selectFolder();
-        console.log("Pasta selecionada:", folder);
+        console.log("Selected folder:", folder);
         if (folder) {
           formData.sourceFolder = folder;
           (document.getElementById("sourceFolder") as HTMLInputElement).value =
             folder;
           validateStep1();
         } else {
-          console.log("Nenhuma pasta selecionada ou diálogo cancelado");
+          console.log("No folder selected or dialog canceled");
         }
       } catch (error) {
-        console.error("Erro ao selecionar pasta:", error);
+        console.error("Error selecting folder:", error);
       }
     });
 
@@ -130,21 +130,19 @@ document.addEventListener("DOMContentLoaded", () => {
     .getElementById("selectTempFolder")
     ?.addEventListener("click", async () => {
       try {
-        console.log("Selecionando pasta temporária...");
+        console.log("Selecting temp folder...");
         const folder = await window.api.selectFolder();
-        console.log("Pasta temporária selecionada:", folder);
+        console.log("Selected temp folder:", folder);
         if (folder) {
           formData.tempFolder = folder;
           (document.getElementById("tempFolder") as HTMLInputElement).value =
             folder;
           validateStep2();
         } else {
-          console.log(
-            "Nenhuma pasta temporária selecionada ou diálogo cancelado"
-          );
+          console.log("No temp folder selected or dialog canceled");
         }
       } catch (error) {
-        console.error("Erro ao selecionar pasta temporária:", error);
+        console.error("Error selecting temp folder:", error);
       }
     });
 
@@ -152,25 +150,23 @@ document.addEventListener("DOMContentLoaded", () => {
     .getElementById("selectOutputFolder")
     ?.addEventListener("click", async () => {
       try {
-        console.log("Selecionando pasta de saída...");
+        console.log("Selecting output folder...");
         const folder = await window.api.selectFolder();
-        console.log("Pasta de saída selecionada:", folder);
+        console.log("Selected output folder:", folder);
         if (folder) {
           formData.outputFolder = folder;
           (document.getElementById("outputFolder") as HTMLInputElement).value =
             folder;
           validateStep2();
         } else {
-          console.log(
-            "Nenhuma pasta de saída selecionada ou diálogo cancelado"
-          );
+          console.log("No output folder selected or dialog canceled");
         }
       } catch (error) {
-        console.error("Erro ao selecionar pasta de saída:", error);
+        console.error("Error selecting output folder:", error);
       }
     });
 
-  // Event listeners para checkboxes
+  // Checkbox event listeners
   document.getElementById("removeComments")?.addEventListener("change", (e) => {
     formData.simplificationOptions.removeComments = (
       e.target as HTMLInputElement
@@ -189,12 +185,12 @@ document.addEventListener("DOMContentLoaded", () => {
     ).checked;
   });
 
-  // Event listeners para selects e inputs
+  // Select and input event listeners
   document.getElementById("provider")?.addEventListener("change", (e) => {
     const provider = (e.target as HTMLSelectElement).value;
     formData.conversionOptions.provider = provider as any;
     
-    // Mostrar/esconder o campo de URL da API para o Llama
+    // Show/hide API URL field for Llama
     const apiUrlContainer = document.getElementById("apiUrlContainer");
     const customPromptContainer = document.getElementById("customPromptContainer");
     if (apiUrlContainer) {
@@ -211,7 +207,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const value = (e.target as HTMLSelectElement).value;
     formData.conversionOptions.targetLanguage = value;
     
-    // Mostrar campo de prompt personalizado
+    // Show custom prompt field
     const customPromptContainer = document.getElementById("customPromptContainer");
     if (customPromptContainer) {
       customPromptContainer.style.display = "block";
@@ -229,7 +225,7 @@ document.addEventListener("DOMContentLoaded", () => {
       formData.conversionOptions.targetLanguage = value.toLowerCase();
     }
     
-    // Mostrar campo de prompt personalizado
+    // Show custom prompt field
     const customPromptContainer = document.getElementById("customPromptContainer");
     if (customPromptContainer) {
       customPromptContainer.style.display = "block";
@@ -237,26 +233,26 @@ document.addEventListener("DOMContentLoaded", () => {
     showCustomPrompt();
   });
 
-  // Função para mostrar e atualizar o prompt personalizado
+  // Function to show and update the custom prompt
   function showCustomPrompt() {
     const promptTextarea = document.getElementById("conversionPrompt") as HTMLTextAreaElement;
     if (!promptTextarea) return;
 
-    // Atualizar o prompt com a linguagem selecionada
+    // Update the prompt with the selected language
     let updatedPrompt = defaultPrompt
-      .replace(/\{sourceLanguage\}/g, "detecção automática")
+      .replace(/\{sourceLanguage\}/g, "auto detect")
       .replace(/\{targetLanguage\}/g, formData.conversionOptions.targetLanguage);
 
     promptTextarea.value = updatedPrompt;
     formData.conversionOptions.customPrompt = updatedPrompt;
   }
 
-  // Event listener para o prompt personalizado
+  // Event listener for the custom prompt
   document.getElementById("conversionPrompt")?.addEventListener("input", (e) => {
     formData.conversionOptions.customPrompt = (e.target as HTMLTextAreaElement).value;
   });
 
-  // Event listener para resetar o prompt
+  // Event listener to reset the prompt
   document.getElementById("resetPrompt")?.addEventListener("click", () => {
     const promptTextarea = document.getElementById("conversionPrompt") as HTMLTextAreaElement;
     if (promptTextarea) {
@@ -274,25 +270,25 @@ document.addEventListener("DOMContentLoaded", () => {
     validateStep2();
   });
 
-  // Botão de iniciar minificação
+  // Button to start minification
   document
     .getElementById("startMinification")
     ?.addEventListener("click", startMinification);
 
-  // Botão de iniciar processamento
+  // Button to start processing
   document
     .getElementById("startProcessing")
     ?.addEventListener("click", startProcessing);
 
-  // Botão para abrir pasta de saída
+  // Button to open output folder
   document.getElementById("openOutputFolder")?.addEventListener("click", () => {
     if (formData.outputFolder) {
-      // Em um app real, aqui seria usado o electron.shell.openPath
-      logMessage(`Abrindo pasta: ${formData.outputFolder}`);
+      // In a real app, electron.shell.openPath would be used here
+      logMessage(`Opening folder: ${formData.outputFolder}`);
     }
   });
 
-  // Função para validar a Etapa 1
+  // Function to validate Step 1
   function validateStep1() {
     const nextButton = document.getElementById(
       "nextStep1"
@@ -300,7 +296,7 @@ document.addEventListener("DOMContentLoaded", () => {
     nextButton.disabled = !formData.sourceFolder;
   }
 
-  // Função para validar a Etapa 2
+  // Function to validate Step 2
   function validateStep2() {
     const nextButton = document.getElementById(
       "nextStep2"
@@ -324,27 +320,27 @@ document.addEventListener("DOMContentLoaded", () => {
     
     nextButton.disabled = !isValid;
 
-    // Mostrar o prompt personalizado se uma linguagem estiver selecionada
+    // Show the custom prompt if a language is selected
     const customPromptContainer = document.getElementById("customPromptContainer");
     if (customPromptContainer) {
       customPromptContainer.style.display = hasTargetLanguage ? "block" : "none";
     }
     
-    // Se tiver linguagem selecionada, atualizar o prompt
+    // If a language is selected, update the prompt
     if (hasTargetLanguage) {
       showCustomPrompt();
     }
   }
 
-  // Função para navegar entre as etapas
+  // Function to navigate between steps
   function navigateToStep(step: number) {
     if (step < 1 || step > totalSteps) return;
 
-    // Ocultar todas as etapas
+    // Hide all steps
     for (let i = 1; i <= totalSteps; i++) {
       stepContents[i]?.classList.add("hidden");
 
-      // Atualizar indicadores
+      // Update indicators
       const indicator = stepIndicators[i];
       if (indicator) {
         indicator.classList.remove(
@@ -362,7 +358,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
       }
 
-      // Atualizar linhas de conexão
+      // Update connection lines
       if (i < totalSteps && lineIndicators[i]) {
         if (i < step) {
           lineIndicators[i]?.classList.remove("bg-gray-300");
@@ -377,9 +373,9 @@ document.addEventListener("DOMContentLoaded", () => {
     stepContents[step]?.classList.remove("hidden");
     currentStep = step;
     
-    // Ações específicas para cada etapa
+    // Specific actions for each step
     if (step === 3) {
-      // Atualizar informações na tela de minificação
+      // Update information on the minification screen
       const minifySourceElement = document.getElementById("minifySource");
       const minifyTempElement = document.getElementById("minifyTemp");
       const minifyOptionsElement = document.getElementById("minifyOptions");
@@ -390,16 +386,16 @@ document.addEventListener("DOMContentLoaded", () => {
         
         const options = [];
         if (formData.simplificationOptions.removeComments)
-          options.push("Remover comentários");
+          options.push("Remove comments");
         if (formData.simplificationOptions.reduceKeywords)
-          options.push("Reduzir palavras-chave");
+          options.push("Reduce keywords");
         if (formData.simplificationOptions.minify)
-          options.push("Minificar código");
+          options.push("Minify code");
         
-        minifyOptionsElement.textContent = options.join(", ") || "Nenhuma";
+        minifyOptionsElement.textContent = options.join(", ") || "None";
       }
 
-      // Se já temos resultados, mostrar o resumo
+      // If we already have results, show the summary
       if (minificationResults && minificationResults.success) {
         updateMinificationSummary();
       }
@@ -408,7 +404,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  // Função para atualizar o resumo na etapa 4 (conversão)
+  // Function to update the summary in step 4 (conversion)
   function updateConversionSummary() {
     if (document.getElementById("summarySource")) {
       document.getElementById("summarySource")!.textContent =
@@ -424,14 +420,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const options = [];
       if (formData.simplificationOptions.removeComments)
-        options.push("Remover comentários");
+        options.push("Remove comments");
       if (formData.simplificationOptions.reduceKeywords)
-        options.push("Reduzir palavras-chave");
+        options.push("Reduce keywords");
       if (formData.simplificationOptions.minify)
-        options.push("Minificar código");      
+        options.push("Minify code");      
         
       document.getElementById("summaryOptions")!.textContent =
-        options.join(", ") || "Nenhuma";
+        options.join(", ") || "None";
     }
   }
 
@@ -449,43 +445,43 @@ document.addEventListener("DOMContentLoaded", () => {
         return provider;
     }
   }
-  // Variáveis para calcular tempos estimados
+  // Variables to calculate estimated times
   let processingTotalFiles = 0;
   let processingCompletedFiles = 0;
   let processingStartTimeEstimation = 0;
   let processingTokensTotal: { sent: number; received: number } = { sent: 0, received: 0 };
   
-  // Função para calcular e mostrar o tempo estimado de conclusão
+  // Function to calculate and show estimated completion time
   function updateTimeEstimation(completedFiles: number, totalFiles: number) {
-    if (completedFiles === 0 || totalFiles === 0) return "Calculando...";
+    if (completedFiles === 0 || totalFiles === 0) return "Calculating...";
     
     const elapsedTime = Date.now() - processingStartTimeEstimation;
     const progressRatio = completedFiles / totalFiles;
     const estimatedTotalTime = elapsedTime / progressRatio;
     const remainingTime = estimatedTotalTime - elapsedTime;
     
-    // Converter milissegundos para formato legível
+    // Convert milliseconds to readable format
     return formatTime(remainingTime);
   }
   
-  // Função para formatar tempo em milissegundos para formato legível
+  // Function to format time in milliseconds to readable format
   function formatTime(ms: number): string {
-    if (ms < 0) return "Finalizando...";
+    if (ms < 0) return "Finishing...";
     
     const seconds = Math.floor(ms / 1000);
     const minutes = Math.floor(seconds / 60);
     const hours = Math.floor(minutes / 60);
     
     if (hours > 0) {
-      return `${hours}h ${minutes % 60}m restantes`;
+      return `${hours}h ${minutes % 60}m remaining`;
     } else if (minutes > 0) {
-      return `${minutes}m ${seconds % 60}s restantes`;
+      return `${minutes}m ${seconds % 60}s remaining`;
     } else {
-      return `${seconds}s restantes`;
+      return `${seconds}s remaining`;
     }
   }
 
-  // Função auxiliar para formatar tamanho em bytes
+  // Helper function to format size in bytes
   function formatBytes(bytes: number): string {
     if (bytes === 0) return '0 Bytes';
     
@@ -496,7 +492,7 @@ document.addEventListener("DOMContentLoaded", () => {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   }
 
-  // Função para iniciar a minificação
+  // Function to start minification
   async function startMinification() {
     const startButton = document.getElementById(
       "startMinification"
@@ -506,42 +502,42 @@ document.addEventListener("DOMContentLoaded", () => {
     ) as HTMLButtonElement;
 
     startButton.disabled = true;
-    startButton.textContent = "Minificando...";
+    startButton.textContent = "Minifying...";
     resetMinificationProgress();
 
     try {
-      logMinificationMessage("🚀 Iniciando minificação dos arquivos...");
+      logMinificationMessage("🚀 Starting minification of files...");
 
-      // Simulação inicial para feedback visual
+      // Initial simulation for visual feedback
       await simulateMinificationProgress(10);
       
-      // Chamar o processo real de minificação
+      // Call the real minification process
       const result: any = await window.api.minifyFiles(formData);
       
       if (!result || !result.success) {
-        throw new Error(result?.error || "Erro desconhecido na minificação");
+        throw new Error(result?.error || "Unknown error during minification");
       }
       
-      // Simulação final para feedback visual
+      // Final simulation for visual feedback
       for (let i = 50; i <= 100; i += 10) {
         await simulateMinificationProgress(i);
       }
       
       minificationResults = result;
-      logMinificationMessage(`✅ Minificação concluída com sucesso! ${result.result.minifiedFiles.length} arquivos processados.`);
+      logMinificationMessage(`✅ Minification completed successfully! ${result.result.minifiedFiles.length} files processed.`);
       
-      // Atualizar informações na UI
+      // Update information in the UI
       updateMinificationSummary();
       nextButton.disabled = false;
     } catch (error) {
-      logMinificationMessage(`❌ Erro durante a minificação: ${error}`);
+      logMinificationMessage(`❌ Error during minification: ${error}`);
     } finally {
       startButton.disabled = false;
-      startButton.textContent = "Iniciar Minificação";
+      startButton.textContent = "Start Minification";
     }
   }
 
-  // Função para iniciar o processamento
+  // Function to start processing
   async function startProcessing() {
     const startButton = document.getElementById(
       "startProcessing"
@@ -551,27 +547,27 @@ document.addEventListener("DOMContentLoaded", () => {
     ) as HTMLButtonElement;
 
     startButton.disabled = true;
-    startButton.textContent = "Processando...";
+    startButton.textContent = "Processing...";
     resetProgress();
 
     processingStartTime = Date.now();
-    processingStartTimeEstimation = Date.now(); // Iniciar cálculo de tempo estimado
+    processingStartTimeEstimation = Date.now(); // Start estimated time calculation
 
     try {
-      logMessage("🚀 Iniciando processamento do código...");
+      logMessage("🚀 Starting code processing...");
 
       const result: any = await window.api.processCode(formData);
       if (!result || !result.success) {
-        throw new Error(result?.error || "Erro desconhecido no processamento");
+        throw new Error(result?.error || "Unknown error in processing");
       }
       processingResults = result;
       nextButton.disabled = false;
-      logMessage("✅ Processamento concluído com sucesso!");
+      logMessage("✅ Processing completed successfully!");
     } catch (error) {
-      logMessage(`❌ Erro durante o processamento: ${error}`);
+      logMessage(`❌ Error during processing: ${error}`);
     } finally {
       startButton.disabled = false;
-      startButton.textContent = "Iniciar Processamento";
+      startButton.textContent = "Start Processing";
       updateProcessingResults();
     }
   }
@@ -596,20 +592,20 @@ document.addEventListener("DOMContentLoaded", () => {
     );
   }
 
-  // Função para simular o progresso
+  // Function to simulate progress
   function simulateProgress(percent: number): Promise<void> {
     return new Promise((resolve) => {
       setTimeout(() => {
         updateProgress(percent);
         if (percent % 30 === 0) {
-          logMessage(`${percent}% - Processando arquivos...`);
+          logMessage(`${percent}% - Processing files...`);
         }
         resolve();
       }, 300);
     });
   }
 
-  // Função para atualizar a barra de progresso
+  // Function to update the progress bar
   function updateProgress(percent: number, timeEstimation?: string) {
     const progressBar = document.getElementById("progressBar");
     const progressText = document.getElementById("progressText");
@@ -617,13 +613,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (progressBar && progressText) {
       progressBar.style.width = `${percent}%`;
-      progressText.textContent = `${percent}% concluído`;
+      progressText.textContent = `${percent}% completed`;
       
-      // Atualizar a estimativa de tempo restante se for fornecida
+      // Update the remaining time estimation if provided
       if (timeEstimationElement && timeEstimation) {
         timeEstimationElement.textContent = timeEstimation;
       }
-      // Caso contrário, calcular estimativa com base nas variáveis de progresso
+      // Otherwise, calculate estimation based on progress variables
       else if (timeEstimationElement && processingTotalFiles > 0) {
         const estimation = updateTimeEstimation(processingCompletedFiles, processingTotalFiles);
         timeEstimationElement.textContent = estimation;
@@ -631,7 +627,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  // Função para resetar o progresso
+  // Function to reset progress
   function resetProgress() {
     updateProgress(0);
     const logElement = document.getElementById("processLog");
@@ -639,19 +635,19 @@ document.addEventListener("DOMContentLoaded", () => {
       logElement.innerHTML = "";
     }
     
-    // Reiniciar variáveis de estimativa de tempo
+    // Restart time estimation variables
     processingTotalFiles = 0;
     processingCompletedFiles = 0;
     processingStartTimeEstimation = Date.now();
     processingTokensTotal = { sent: 0, received: 0 };
     
-    // Resetar elemento de estimativa de tempo
+    // Reset time estimation element
     const timeEstimationElement = document.getElementById("timeEstimation");
     if (timeEstimationElement) {
-      timeEstimationElement.textContent = "Calculando...";
+      timeEstimationElement.textContent = "Calculating...";
     }
     
-    // Resetar elementos de métricas
+    // Reset metrics elements
     const sentTokensElement = document.getElementById("sentTokens");
     const receivedTokensElement = document.getElementById("receivedTokens");
     const processedFilesElement = document.getElementById("conversionProcessedFiles");
@@ -661,7 +657,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (processedFilesElement) processedFilesElement.textContent = "-";
   }
 
-  // Função para resetar o progresso da minificação
+  // Function to reset minification progress
   function resetMinificationProgress() {
     updateMinificationProgress(0);
     const logElement = document.getElementById("minifyLog");
@@ -670,7 +666,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  // Função para atualizar a barra de progresso da minificação
+  // Function to update the minification progress bar
   function updateMinificationProgress(percent: number, timeEstimation?: string) {
     const progressBar = document.getElementById("minifyProgressBar");
     const progressText = document.getElementById("minifyProgressText");
@@ -678,7 +674,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (progressBar && progressText) {
       progressBar.style.width = `${percent}%`;
-      progressText.textContent = `${percent}% concluído`;
+      progressText.textContent = `${percent}% completed`;
       
       if (timeEstimationElement && timeEstimation) {
         timeEstimationElement.textContent = timeEstimation;
@@ -686,25 +682,25 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  // Função para simular o progresso da minificação
+  // Function to simulate minification progress
   function simulateMinificationProgress(percent: number): Promise<void> {
     return new Promise((resolve) => {
       setTimeout(() => {
-        // Calcular tempo estimado com base no progresso
+        // Calculate estimated time based on progress
         const timeEstimation = percent < 100 ? 
-          `${Math.round((100 - percent) / 10)}s restantes (estimativa)` : "Concluído!";
+          `${Math.round((100 - percent) / 10)}s remaining (estimate)` : "Completed!";
         
         updateMinificationProgress(percent, timeEstimation);
         
         if (percent % 30 === 0) {
-          logMinificationMessage(`${percent}% - Minificando arquivos...`);
+          logMinificationMessage(`${percent}% - Minifying files...`);
         }
         resolve();
       }, 200);
     });
   }
 
-  // Função para adicionar mensagem ao log da minificação
+  // Function to add message to minification log
   function logMinificationMessage(message: string) {
     const logElement = document.getElementById("minifyLog");
     if (logElement) {
@@ -716,9 +712,9 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  // Função para atualizar o resumo da minificação
+  // Function to update minification summary
   function updateMinificationSummary() {
-    // Atualiza informações básicas sobre a minificação
+    // Update basic information about minification
     const minifySourceElement = document.getElementById("minifySource");
     const minifyTempElement = document.getElementById("minifyTemp");
     const minifyOptionsElement = document.getElementById("minifyOptions");
@@ -729,23 +725,23 @@ document.addEventListener("DOMContentLoaded", () => {
       
       const options = [];
       if (formData.simplificationOptions.removeComments)
-        options.push("Remover comentários");
+        options.push("Remove comments");
       if (formData.simplificationOptions.reduceKeywords)
-        options.push("Reduzir palavras-chave");
+        options.push("Reduce keywords");
       if (formData.simplificationOptions.minify)
-        options.push("Minificar código");
+        options.push("Minify code");
       
-      minifyOptionsElement.textContent = options.join(", ") || "Nenhuma";
+      minifyOptionsElement.textContent = options.join(", ") || "None";
     }
     
-    // Se já temos resultados, mostra o resumo completo
+    // If we already have results, show the complete summary
     if (minificationResults && minificationResults.success) {
       const totalFiles = minificationResults.result.minifiedFiles?.length || 0;
       const totalSizeReduction = minificationResults.result.sizeReduction || 0;
       
       const fileCountElement = document.getElementById("fileCount");
       if (fileCountElement) {
-        fileCountElement.textContent = `${totalFiles} arquivos`;
+        fileCountElement.textContent = `${totalFiles} files`;
       }
       
       const summaryElement = document.getElementById("minificationSummary");
@@ -759,11 +755,11 @@ document.addEventListener("DOMContentLoaded", () => {
                 </svg>
               </div>
               <div class="ml-3">
-                <h3 class="text-sm font-medium text-green-800">Minificação Concluída</h3>
+                <h3 class="text-sm font-medium text-green-800">Minification Completed</h3>
                 <div class="mt-2 text-sm text-green-700">
-                  <p>📁 Arquivos processados: <strong>${totalFiles}</strong></p>
-                  <p>📉 Redução de tamanho: <strong>${totalSizeReduction}%</strong></p>
-                  <p>📂 Arquivos salvos em: <strong>${formData.tempFolder}</strong></p>
+                  <p>📁 Files processed: <strong>${totalFiles}</strong></p>
+                  <p>📉 Size reduction: <strong>${totalSizeReduction}%</strong></p>
+                  <p>📂 Files saved in: <strong>${formData.tempFolder}</strong></p>
                 </div>
               </div>
             </div>
@@ -773,7 +769,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  // Função para adicionar mensagem ao log
+  // Function to add message to log
   function logMessage(message: string) {
     const logElement = document.getElementById("processLog");
     if (logElement) {
@@ -785,7 +781,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  // Função para atualizar os resultados na etapa 4
+  // Function to update results in step 4
   function updateProcessingResults() {
     if (!processingResults || !processingResults.success) return;
 
@@ -802,10 +798,10 @@ document.addEventListener("DOMContentLoaded", () => {
       )!.textContent = `${processingTime}s`;
       document.getElementById("filesSize")!.textContent = `${
         filesCount * 25
-      } KB`; // Valor fictício
+      } KB`; // Fictitious value
     }
 
-    // Preencher tabela de arquivos
+    // Fill file table
     const filesList = document.getElementById("filesList");
     if (filesList) {
       filesList.innerHTML = "";
@@ -834,7 +830,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  // Função para encurtar caminhos longos
+  // Function to shorten long paths
   function getShortPath(path: string): string {
     if (path.length > 40) {
       const parts = path.split("/");
@@ -847,7 +843,7 @@ document.addEventListener("DOMContentLoaded", () => {
     return path;
   }
 
-  // Função para resetar o aplicativo
+  // Function to reset the application
   function resetApplication() {
     formData.sourceFolder = "";
     formData.tempFolder = "";
@@ -879,19 +875,19 @@ document.addEventListener("DOMContentLoaded", () => {
 
     navigateToStep(1);
   }
-  // Inicialização da interface
+  // Interface initialization
   validateStep1();  validateStep2();
 
-  // Configurar listeners para eventos de progresso e métricas usando a função global
+  // Set up listeners for progress and metrics events using the global function
   if (typeof window.setupEventHandlers === 'function') {
     window.setupEventHandlers();
   } else {
-    console.error('setupEventHandlers não está disponível. Verifique se event-handlers.js foi carregado corretamente.');
+    console.error('setupEventHandlers is not available. Check if event-handlers.js was loaded correctly.');
   }
 
-  window.electronAPI.logMessage("Iniciando a etapa 3: Conversão de arquivos...");
+  window.electronAPI.logMessage("Starting step 3: File Conversion...");
 
-  // Adiciona um listener para exibir o progresso da migração
+  // Add a listener to show migration progress
   window.electronAPI.onMigrationProgress((message: string) => {
     const progressElement = document.getElementById("migration-progress");
     if (progressElement) {
@@ -899,15 +895,37 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  // Funções do agente IA
+  // AI agent functions
   document.getElementById("btnAnalyzeWithIA")?.addEventListener("click", analyzeCodeWithIA);
   document.getElementById("btnApplySuggestions")?.addEventListener("click", applyIASuggestions);
   document.getElementById("btnCancelSuggestions")?.addEventListener("click", cancelIASuggestions);
   
   let iaSuggestions: any[] = [];
   
-  async function analyzeCodeWithIA() {
-    // Mostrar loading
+  // Event listeners for AI provider
+  document.getElementById("iaProvider")?.addEventListener("change", (e) => {
+    const provider = (e.target as HTMLSelectElement).value;
+    const apiKeyContainer = document.getElementById("iaApiKeyContainer");
+    const apiUrlContainer = document.getElementById("iaApiUrlContainer");
+    
+    if (apiKeyContainer && apiUrlContainer) {
+      const needsApiKey = ["openai", "gemini", "anthropic", "llama"].includes(provider);
+      const needsApiUrl = provider === "llama";
+      
+      apiKeyContainer.style.display = needsApiKey ? "block" : "none";
+      apiUrlContainer.style.display = needsApiUrl ? "block" : "none";
+    }
+  });
+
+  document.getElementById("iaApiKey")?.addEventListener("input", (e) => {
+    formData.conversionOptions.apiKey = (e.target as HTMLInputElement).value;
+  });
+
+  document.getElementById("iaApiUrl")?.addEventListener("input", (e) => {
+    formData.conversionOptions.apiUrl = (e.target as HTMLInputElement).value;
+  });
+    async function analyzeCodeWithIA() {
+    // Show loading
     document.getElementById("iaLoading")?.classList.remove("hidden");
     document.getElementById("iaSuggestions")?.classList.add("hidden");
     document.getElementById("iaResults")?.classList.add("hidden");
@@ -915,27 +933,48 @@ document.addEventListener("DOMContentLoaded", () => {
     
     try {
       if (!processingResults || !processingResults.success) {
-        throw new Error("Nenhum resultado de processamento disponível");
+        throw new Error("No processing result available");
       }
       
-      // Obter arquivos convertidos para análise
+      // Get values from the selected provider
+      const provider = (document.getElementById("iaProvider") as HTMLSelectElement).value;
+      const apiKey = (document.getElementById("iaApiKey") as HTMLInputElement).value;
+      const apiUrl = (document.getElementById("iaApiUrl") as HTMLInputElement).value;
+
+      // Validate required fields
+      const needsApiKey = ["openai", "gemini", "anthropic", "llama"].includes(provider);
+      const needsApiUrl = provider === "llama";
+
+      if (needsApiKey && !apiKey) {
+        throw new Error("API Key is required for the selected provider");
+      }
+      if (needsApiUrl && !apiUrl) {
+        throw new Error("API URL is required for Llama provider");
+      }
+      
+      // Add AI options to formData
+      formData.conversionOptions.provider = provider;
+      formData.conversionOptions.apiKey = apiKey;
+      formData.conversionOptions.apiUrl = apiUrl;
+      
+      // Get converted files for analysis
       const files = processingResults.result.convertedFiles;
       
-      // Chamar a API do agente IA
+      // Call the AI agent API
       const result = await window.iaAgent.analyzeCode(formData, files);
       
       if (result.success && result.suggestions && result.suggestions.length > 0) {
         iaSuggestions = result.suggestions;
         displaySuggestions(iaSuggestions);
       } else {
-        throw new Error("Nenhuma sugestão encontrada pela IA");
+        throw new Error("No suggestions found by AI");
       }
     } catch (error) {
-      logMessage(`❌ Erro ao analisar código com IA: ${error}`);
+      logMessage(`❌ Error analyzing code with AI: ${error}`);
       document.getElementById("iaResults")?.classList.remove("hidden");
       const resultsList = document.getElementById("iaResultsList");
       if (resultsList) {
-        resultsList.innerHTML = `<div class="p-3 bg-red-50 border border-red-200 rounded text-red-700">Erro ao analisar código: ${error}</div>`;
+        resultsList.innerHTML = `<div class="p-3 bg-red-50 border border-red-200 rounded text-red-700">Error analyzing code: ${error}</div>`;
       }
     } finally {
       document.getElementById("iaLoading")?.classList.add("hidden");
@@ -946,32 +985,28 @@ document.addEventListener("DOMContentLoaded", () => {
   function displaySuggestions(suggestions: any[]) {
     const suggestionsList = document.getElementById("suggestionsList");
     if (!suggestionsList) return;
-    
     suggestionsList.innerHTML = "";
-    
     suggestions.forEach((suggestion, index) => {
       const item = document.createElement("div");
       item.className = "p-3 bg-blue-50 border border-blue-200 rounded";
-      
       let details = "";
       switch (suggestion.type) {
         case "move":
-          details = `Mover <span class="font-semibold">${suggestion.path}</span> para <span class="font-semibold">${suggestion.destination}</span>`;
+          details = `Move <span class="font-semibold">${suggestion.path}</span> to <span class="font-semibold">${suggestion.destination}</span>`;
           break;
         case "rename":
-          details = `Renomear <span class="font-semibold">${suggestion.path}</span> para <span class="font-semibold">${suggestion.newName}</span>`;
+          details = `Rename <span class="font-semibold">${suggestion.path}</span> to <span class="font-semibold">${suggestion.newName}</span>`;
           break;
         case "create":
-          details = `Criar pasta <span class="font-semibold">${suggestion.path}</span>`;
+          details = `Create folder <span class="font-semibold">${suggestion.path}</span>`;
           break;
         case "delete":
-          details = `Remover <span class="font-semibold">${suggestion.path}</span>`;
+          details = `Delete <span class="font-semibold">${suggestion.path}</span>`;
           break;
         case "modify":
-          details = `Modificar <span class="font-semibold">${suggestion.path}</span>`;
+          details = `Modify <span class="font-semibold">${suggestion.path}</span>`;
           break;
       }
-      
       item.innerHTML = `
         <div class="flex items-start">
           <div class="flex-shrink-0 mt-0.5">
@@ -983,47 +1018,41 @@ document.addEventListener("DOMContentLoaded", () => {
           </div>
         </div>
       `;
-      
       suggestionsList.appendChild(item);
     });
-    
     document.getElementById("iaSuggestions")?.classList.remove("hidden");
   }
   
   async function applyIASuggestions() {
-    // Obter sugestões selecionadas
+    // Get selected suggestions
     const selectedSuggestions = iaSuggestions.filter((_, index) => {
       const checkbox = document.getElementById(`suggestion-${index}`) as HTMLInputElement;
       return checkbox && checkbox.checked;
     });
-    
     if (selectedSuggestions.length === 0) {
-      logMessage("Nenhuma sugestão selecionada para aplicar");
+      logMessage("No suggestion selected to apply");
       return;
     }
-    
-    // Mostrar loading
+    // Show loading
     document.getElementById("iaLoading")?.classList.remove("hidden");
     document.getElementById("iaSuggestions")?.classList.add("hidden");
     document.getElementById("btnAnalyzeWithIA")?.setAttribute("disabled", "true");
-    
     try {
-      // Executar sugestões
+      // Execute suggestions
       const result = await window.iaAgent.executeSuggestions(
         selectedSuggestions,
         formData.outputFolder
       );
-      
       if (result.success) {
         displayResults(result.results || []);
       } else {
-        throw new Error(result.error || "Erro ao executar sugestões");
+        throw new Error(result.error || "Error applying suggestions");
       }
     } catch (error) {
-      logMessage(`❌ Erro ao aplicar sugestões: ${error}`);
+      logMessage(`❌ Error applying suggestions: ${error}`);
       const iaResults = document.getElementById("iaResults");
       if (iaResults) {
-        iaResults.innerHTML = `<div class="p-3 bg-red-50 border border-red-200 rounded text-red-700">Erro ao aplicar sugestões: ${error}</div>`;
+        iaResults.innerHTML = `<div class="p-3 bg-red-50 border border-red-200 rounded text-red-700">Error applying suggestions: ${error}</div>`;
         iaResults.classList.remove("hidden");
       }
     } finally {
@@ -1035,33 +1064,29 @@ document.addEventListener("DOMContentLoaded", () => {
   function displayResults(results: any[]) {
     const resultsList = document.getElementById("iaResultsList");
     if (!resultsList) return;
-    
     resultsList.innerHTML = "";
-    
     results.forEach(result => {
       const item = document.createElement("div");
       item.className = `p-3 mb-2 border rounded ${result.success ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`;
-      
       const suggestion = result.suggestion;
       let details = "";
       switch (suggestion.type) {
         case "move":
-          details = `Mover <span class="font-semibold">${suggestion.path}</span> para <span class="font-semibold">${suggestion.destination}</span>`;
+          details = `Move <span class="font-semibold">${suggestion.path}</span> to <span class="font-semibold">${suggestion.destination}</span>`;
           break;
         case "rename":
-          details = `Renomear <span class="font-semibold">${suggestion.path}</span> para <span class="font-semibold">${suggestion.newName}</span>`;
+          details = `Rename <span class="font-semibold">${suggestion.path}</span> to <span class="font-semibold">${suggestion.newName}</span>`;
           break;
         case "create":
-          details = `Criar pasta <span class="font-semibold">${suggestion.path}</span>`;
+          details = `Create folder <span class="font-semibold">${suggestion.path}</span>`;
           break;
         case "delete":
-          details = `Remover <span class="font-semibold">${suggestion.path}</span>`;
+          details = `Delete <span class="font-semibold">${suggestion.path}</span>`;
           break;
         case "modify":
-          details = `Modificar <span class="font-semibold">${suggestion.path}</span>`;
+          details = `Modify <span class="font-semibold">${suggestion.path}</span>`;
           break;
       }
-      
       item.innerHTML = `
         <div class="flex items-start">
           <div class="flex-shrink-0">
@@ -1071,14 +1096,12 @@ document.addEventListener("DOMContentLoaded", () => {
           </div>
           <div class="ml-3">
             <p class="text-sm font-medium ${result.success ? 'text-green-800' : 'text-red-800'}">${suggestion.type.toUpperCase()}: ${details}</p>
-            ${result.error ? `<p class="text-sm text-red-600">Erro: ${result.error}</p>` : ''}
+            ${result.error ? `<p class="text-sm text-red-600">Error: ${result.error}</p>` : ''}
           </div>
         </div>
       `;
-      
       resultsList.appendChild(item);
     });
-    
     document.getElementById("iaResults")?.classList.remove("hidden");
   }
   
@@ -1087,12 +1110,12 @@ document.addEventListener("DOMContentLoaded", () => {
     iaSuggestions = [];
   }
 
-  // Variáveis para estimar tempo durante a minificação
+  // Variables to estimate time during minification
   let minifyTotalFiles = 0;
   let minifyProcessedFiles = 0;
   let minifyStartTime = 0;
   
-  // Adicionar listeners para eventos de minificação
+  // Add listeners for minification events
   window.logger.onLogUpdate((data) => {
     if (data.type === 'minify') {
       logMinificationMessage(data.message);
@@ -1100,54 +1123,41 @@ document.addEventListener("DOMContentLoaded", () => {
       logMessage(data.message);
     }
   });
-  
-  // Listener para início da minificação
+  // Listener for minification start
   document.addEventListener('minifyStart', (e: any) => {
     minifyTotalFiles = e.detail.totalFiles || 0;
     minifyProcessedFiles = 0;
     minifyStartTime = Date.now();
-    
-    logMinificationMessage(`🚀 Iniciando minificação de ${minifyTotalFiles} arquivos...`);
-    updateMinificationProgress(0, "Calculando...");
+    logMinificationMessage(`🚀 Starting minification of ${minifyTotalFiles} files...`);
+    updateMinificationProgress(0, "Calculating...");
   });
-  
-  // Listener para atualização de progresso da minificação
+  // Listener for minification progress update
   document.addEventListener('minifyProgress', (e: any) => {
     minifyProcessedFiles = e.detail.processed || 0;
-    
     const percent = Math.floor((minifyProcessedFiles / minifyTotalFiles) * 100);
     const elapsedTime = Date.now() - minifyStartTime;
     const estimatedTimePerFile = minifyProcessedFiles > 0 ? elapsedTime / minifyProcessedFiles : 0;
     const remainingFiles = minifyTotalFiles - minifyProcessedFiles;
     const timeRemaining = estimatedTimePerFile * remainingFiles;
-    
     const timeEstimation = formatTime(timeRemaining);
-    
     updateMinificationProgress(percent, timeEstimation);
-    
-    // Exibir detalhes do arquivo no log
+    // Show file details in the log
     if (e.detail.file) {
-      let fileInfo = `Minificado: ${e.detail.file}`;
-      
+      let fileInfo = `Minified: ${e.detail.file}`;
       if (e.detail.sizes) {
         fileInfo += ` (${formatBytes(e.detail.sizes.original)} → ${formatBytes(e.detail.sizes.minified)})`;
       }
-      
       logMinificationMessage(fileInfo);
     }
   });
-  
-  // Listener para conclusão da minificação
+  // Listener for minification completion
   document.addEventListener('minifyComplete', (e: any) => {
     const totalTime = Date.now() - minifyStartTime;
-    
-    updateMinificationProgress(100, "Concluído!");
-    logMinificationMessage(`✅ Minificação concluída em ${formatTime(totalTime)}`);
-    
+    updateMinificationProgress(100, "Completed!");
+    logMinificationMessage(`✅ Minification completed in ${formatTime(totalTime)}`);
     if (e.detail.stats) {
-      logMinificationMessage(`📊 Total reduzido: ${e.detail.stats.sizeReduction}% (${formatBytes(e.detail.stats.originalSize)} → ${formatBytes(e.detail.stats.minifiedSize)})`);
+      logMinificationMessage(`📊 Total reduced: ${e.detail.stats.sizeReduction}% (${formatBytes(e.detail.stats.originalSize)} → ${formatBytes(e.detail.stats.minifiedSize)})`);
     }
-    
     const nextButton = document.getElementById("nextStep3") as HTMLButtonElement;
     if (nextButton) {
       nextButton.disabled = false;

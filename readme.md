@@ -1,100 +1,100 @@
-// README.md
 # Electron Code Processor
+This is an Electron application that allows interactive source code processing, simplifying and converting it to another language with the help of Artificial Intelligence APIs. The application is built with TypeScript and uses a step-by-step user interface to guide users through the process.
 
-Um aplicativo desktop para processar código-fonte em etapas:
-1. Selecionar código-fonte original
-2. Aplicar simplificações (remover comentários, reduzir palavras-chave, minificar)
-3. Converter para outra linguagem usando APIs de IA (OpenAI, Google Gemini ou Anthropic Claude)
+## YouTube Video
+pt-br
+[![Assista ao vídeo](https://img.youtube.com/vi/V4Y_lPRBVVY/0.jpg)](https://youtu.be/V4Y_lPRBVVY)
 
-![Screenshot do aplicativo](https://via.placeholder.com/800x450)
 
-## Funcionalidades
 
-- Interface de usuário em etapas (wizard)
-- Seleção de pastas de origem e destino
-- Opções de simplificação de código personalizáveis
-- Integração com múltiplas APIs de IA para conversão de código
-- Visualização de progresso em tempo real
-- Sumário detalhado dos resultados
+A desktop application to process source code in steps:
+1. Select the original source code
+![App screenshot](/public/1.png)
+2. Select output folders, modify the prompt, and set conversion options
+![App screenshot](/public/2.0.png)
+![App screenshot](/public/2.1.png)
+3. Apply simplifications (remove comments, reduce keywords, minify) to reduce code size/tokens
+![App screenshot](/public/3.0.png)
+![App screenshot](/public/3.1.png)
+4. Convert to another language using AI APIs (OpenAI, Google Gemini, or Anthropic Claude)
+![App screenshot](/public/4.0.png)
+![App screenshot](/public/4.1.png)
+5. View results and analyze the code with AI for further modifications.
+![App screenshot](/public/5.0.png)!
+![App screenshot](/public/5.1.png)!
 
-## Requisitos
 
-- Node.js 16+
-- npm ou yarn
 
-## Instalação
+## Cost
+![alt text](/public/cost.png)
 
-Clone o repositório e instale as dependências:
+
+## Features
+
+- Step-by-step user interface
+- Source and destination folder selection
+- Customizable code simplification options
+- Integration with multiple AI APIs for code conversion
+- Real-time progress visualization
+- Detailed results summary
+
+## Requirements
+
+- Node.js 20+
+- npm
+
+## Installation
+
+Clone the repository and install dependencies:
 
 ```bash
-git clone https://github.com/seu-usuario/electron-code-processor.git
-cd electron-code-processor
+git clone https://github.com/Pquar/electron-code-migrator
+cd electron-code-migrator
 npm install
 ```
 
-## Compilação e Execução
+## Build and Run
 
-Para compilar o TypeScript e executar o aplicativo:
+To compile TypeScript and run the application:
 
 ```bash
-npm run build   # Compila o TypeScript
-npm start       # Inicia o aplicativo Electron
+npm run build   # Compile TypeScript
+npm start       # Start Electron application
 ```
 
-Ou use o comando de desenvolvimento que compila e inicia o aplicativo:
+Or use the development command that compiles and starts the application:
 
 ```bash
 npm run dev
 ```
 
-## Modo de Desenvolvimento
+## Development Mode
 
-Para desenvolvimento, você pode usar o modo de observação que recompila automaticamente quando os arquivos são alterados:
-
-```bash
-npm run watch   # Compila em modo de observação
-```
-
-Em outro terminal, execute o aplicativo:
+For development, you can use watch mode that automatically recompiles when files are changed:
 
 ```bash
-npm start
+npm run dev
+# or
+npm run watch
 ```
 
-## Uso do Aplicativo
+## Application Usage
 
-1. **Etapa 1**: Selecione a pasta base com o código-fonte original.
-2. **Etapa 2**: Configure as pastas de saída (intermediária e final), opções de simplificação e opções de conversão.
-3. **Etapa 3**: Revise as configurações e inicie o processamento.
-4. **Etapa 4**: Veja o resultado do processamento e acesse os arquivos convertidos.
+1. **Step 1**: Select the base folder with the original source code.
+2. **Step 2**: Configure output folders (intermediate and final), simplification options, and conversion options. Review settings.
+3. **Step 3**: Start the code minification process.
+4. **Step 4**: Start the conversion process with the selected API.
+5. **Step 5**: View results and make additional adjustments as needed.
 
-## Configuração das APIs
+## API Configuration
 
-Para usar as funcionalidades de conversão, você precisará de chaves de API:
+To use the conversion features, you'll need API keys:
 
-- **OpenAI (GPT)**: Obtenha uma chave em [https://platform.openai.com](https://platform.openai.com)
-- **Google Gemini**: Obtenha uma chave em [https://ai.google.dev](https://ai.google.dev)
-- **Anthropic Claude**: Obtenha uma chave em [https://www.anthropic.com/](https://www.anthropic.com/)
+- **OpenAI (GPT)**: Get a key at [https://platform.openai.com](https://platform.openai.com)
+- **Google Gemini**: Get a key at [https://ai.google.dev](https://ai.google.dev)
+- **Anthropic Claude**: Get a key at [https://www.anthropic.com/](https://www.anthropic.com/)
 
-## Construção para Produção
 
-Para criar um pacote de distribuição:
-
-```bash
-# Instale electron-builder como dependência de desenvolvimento
-npm install --save-dev electron-builder
-
-# Adicione script de construção ao package.json
-"scripts": {
-  "dist": "electron-builder"
-}
-
-# Execute o comando de construção
-npm run dist
-```
-
-Isso irá criar um instalador para seu sistema operacional atual na pasta `dist`.
-
-## Licença
+## License
 
 MIT

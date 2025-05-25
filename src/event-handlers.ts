@@ -117,8 +117,8 @@ function setupProcessingListeners(windowObj: Window) {
     windowObj.processingCompletedFiles = 0;
     windowObj.processingTokensTotal = { sent: 0, received: 0 };
     processingFilesDetails = [];
-    logMessage(`🚀 Iniciando processamento de ${data.totalFiles} arquivos...`);
-    updateProgress(0, "Calculando...");
+    logMessage(`🚀 Starting processing of ${data.totalFiles} files...`);
+    updateProgress(0, "Calculating...");
     const processedFilesElement = document.getElementById("processedFilesCount");
     if (processedFilesElement) {
       processedFilesElement.textContent = "0/" + data.totalFiles;
@@ -167,7 +167,7 @@ function setupProcessingListeners(windowObj: Window) {
           break;
         default:
           if (data.file) {
-            let message = `📄 Processando: ${data.file}`;
+            let message = `📄 Processing: ${data.file}`;
             if (data.fileInfo) {
               message += ` | ${data.fileInfo}`;
             }
@@ -214,16 +214,16 @@ function setupProcessingListeners(windowObj: Window) {
     totalFiles?: number,
     totalSize?: { original: number, processed: number }
   }) => {
-    updateProgress(100, "Concluído");
-    logMessage(`✅ Processamento concluído em ${formatTime(data.totalTime)}`);
+    updateProgress(100, "Completed");
+    logMessage(`✅ Processing completed in ${formatTime(data.totalTime)}`);
     const totalSent = data.totalTokens.sent;
     const totalReceived = data.totalTokens.received;
-    logMessage(`📊 Total de Tokens - Enviados: ${totalSent.toLocaleString()}, Recebidos: ${totalReceived.toLocaleString()}`);
+    logMessage(`📊 Total Tokens - Sent: ${totalSent.toLocaleString()}, Received: ${totalReceived.toLocaleString()}`);
     if (data.totalSize) {
       const originalSizeStr = formatBytes(data.totalSize.original);
       const processedSizeStr = formatBytes(data.totalSize.processed);
       const sizeChangePercent = Math.round((data.totalSize.processed / data.totalSize.original) * 100);
-      logMessage(`📁 Tamanho Total - Original: ${originalSizeStr}, Processado: ${processedSizeStr} (${sizeChangePercent}%)`);
+      logMessage(`📁 Total Size - Original: ${originalSizeStr}, Processed: ${processedSizeStr} (${sizeChangePercent}%)`);
     }
     
     const nextButton = document.getElementById("nextStep4") as HTMLButtonElement;

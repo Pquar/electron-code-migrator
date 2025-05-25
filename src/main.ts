@@ -1,18 +1,18 @@
 import { app, BrowserWindow, dialog, ipcMain } from "electron";
 import * as path from "path";
 import * as fs from "fs-extra";
-import { 
-  processFiles, 
-  minifyFiles, 
-  createFolder, 
-  moveFileOrFolder, 
-  renameFileOrFolder, 
-  deleteFileOrFolder, 
-  writeFile, 
+import {
+  processFiles,
+  minifyFiles,
+  createFolder,
+  moveFileOrFolder,
+  renameFileOrFolder,
+  deleteFileOrFolder,
+  writeFile,
   readFile,
   analyzeCodeWithAgent,
   executeAgentSuggestions,
-  AgentSuggestion
+  AgentSuggestion,
 } from "./processor";
 
 let mainWindow: BrowserWindow | null = null;
@@ -88,10 +88,13 @@ function setupIpcHandlers() {
     try {
       const result = await dialog.showOpenDialog(mainWindow, {
         properties: ["openDirectory"],
-        buttonLabel: "Select Folder"
+        buttonLabel: "Select Folder",
       });
 
-      const dialogResult = result as unknown as { canceled: boolean; filePaths: string[] };
+      const dialogResult = result as unknown as {
+        canceled: boolean;
+        filePaths: string[];
+      };
       return dialogResult.canceled ? null : dialogResult.filePaths[0];
     } catch (error) {
       console.error("Error selecting folder:", error);
@@ -116,62 +119,64 @@ function setupIpcHandlers() {
       let totalFiles = 0;
       let originalTotalSize = 0;
       let minifiedTotalSize = 0;
-      
+
       // Process minification events
-      process.on('message', (message: any) => {
-        if (message.type === 'minification-file-count') {
+      process.on("message", (message: any) => {
+        if (message.type === "minification-file-count") {
           totalFiles = message.count;
           // Emit start event for minification with total file count
-          mainWindow?.webContents.send('minify:start', { totalFiles });
-        } else if (message.type === 'minification-progress') {
+          mainWindow?.webContents.send("minify:start", { totalFiles });
+        } else if (message.type === "minification-progress") {
           filesProcessed++;
-          
+
           // Update total sizes for reduction calculation
           if (message.data.size) {
-            const originalSize = typeof message.data.size.beforeBytes === 'number' 
-              ? message.data.size.beforeBytes 
-              : 0;
-              
-            const minifiedSize = typeof message.data.size.afterBytes === 'number' 
-              ? message.data.size.afterBytes 
-              : 0;
-              
+            const originalSize =
+              typeof message.data.size.beforeBytes === "number"
+                ? message.data.size.beforeBytes
+                : 0;
+
+            const minifiedSize =
+              typeof message.data.size.afterBytes === "number"
+                ? message.data.size.afterBytes
+                : 0;
+
             originalTotalSize += originalSize;
             minifiedTotalSize += minifiedSize;
           }
-          
+
           // Emit minification progress event
-          mainWindow?.webContents.send('minify:progress', {
+          mainWindow?.webContents.send("minify:progress", {
             file: message.data.file,
             processed: filesProcessed,
             total: totalFiles,
             tokens: message.data.tokens,
             size: message.data.size,
             originalSize: originalTotalSize,
-            minifiedSize: minifiedTotalSize
+            minifiedSize: minifiedTotalSize,
           });
-          
+
           // Emit log event to maintain compatibility
-          mainWindow?.webContents.send('update-log', {
-            type: 'minify',
-            message: `Minifying: ${message.data.file} (${filesProcessed}/${totalFiles})`
+          mainWindow?.webContents.send("update-log", {
+            type: "minify",
+            message: `Minifying: ${message.data.file} (${filesProcessed}/${totalFiles})`,
           });
         }
       });
 
       // Process files - minification step only
       const result = await minifyFiles(options);
-      
+
       // Emit minification completion event with metrics
       const processingTime = Date.now() - startTime;
-      mainWindow?.webContents.send('minify:complete', {
+      mainWindow?.webContents.send("minify:complete", {
         totalTime: processingTime,
         totalFiles: result.minifiedFiles.length,
         sizeReduction: result.sizeReduction,
         originalSize: originalTotalSize,
         minifiedSize: minifiedTotalSize,
         originalTokens: result.totalOriginalTokens,
-        minifiedTokens: result.totalMinifiedTokens
+        minifiedTokens: result.totalMinifiedTokens,
       });
 
       console.log("Minification completed successfully");
@@ -202,7 +207,7 @@ function setupIpcHandlers() {
     try {
       // Validate received options
       validateProcessOptions(options);
-      
+
       // Set up listeners for progress events
       const startTime = Date.now();
       let totalTokensSent = 0;
@@ -211,62 +216,70 @@ function setupIpcHandlers() {
       let totalFilesEstimate = 0;
       let totalOriginalSize = 0;
       let totalProcessedSize = 0;
-      
+
       // Process progress events
-      process.on('message', (message: any) => {
-        if (message.type === 'file-count') {
+      process.on("message", (message: any) => {
+        if (message.type === "file-count") {
           totalFilesEstimate = message.count;
-          mainWindow?.webContents.send('processing:start', { totalFiles: totalFilesEstimate });
-        } else if (message.type === 'conversion-progress') {
+          mainWindow?.webContents.send("processing:start", {
+            totalFiles: totalFilesEstimate,
+          });
+        } else if (message.type === "conversion-progress") {
           filesProcessed++;
-          
+
           if (message.data.tokensInfo) {
             totalTokensSent += message.data.tokensInfo.sent || 0;
             totalTokensReceived += message.data.tokensInfo.received || 0;
           }
-            // Calculate file size
-          let fileSizeInfo: { original: number, processed: number } | undefined;
-          
+          // Calculate file size
+          let fileSizeInfo: { original: number; processed: number } | undefined;
+
           if (message.data.fileSize) {
             fileSizeInfo = message.data.fileSize;
             totalOriginalSize += message.data.fileSize.original || 0;
             totalProcessedSize += message.data.fileSize.processed || 0;
           }
-          
+
           // Send progress event with all details
-          mainWindow?.webContents.send('processing:file-processed', {
+          mainWindow?.webContents.send("processing:file-processed", {
             file: message.data.file,
             completed: filesProcessed,
             total: totalFilesEstimate,
             tokens: message.data.tokensInfo,
             fileSize: fileSizeInfo,
-            progress: Math.floor((filesProcessed / totalFilesEstimate) * 100)
+            progress: Math.floor((filesProcessed / totalFilesEstimate) * 100),
           });
-          
           // Emit log event to maintain compatibility
-          mainWindow?.webContents.send('update-log', {
-            type: 'process',
-            message: `Processing: ${message.data.file} (${filesProcessed}/${totalFilesEstimate})`
+          if (process.send) {
+            process.send({
+              type: "log",
+              message: `Processing: ${message.data.file} (${filesProcessed}/${totalFilesEstimate})`,
+            });
+          }
+
+          mainWindow?.webContents.send("update-log", {
+            type: "process",
+            message: `Processing: ${message.data.file} (${filesProcessed}/${totalFilesEstimate})`,
           });
         }
       });
 
       // Process files with the new API
       const result = await processFiles(options);
-      
+
       // Send completion event with metrics
       const processingTime = Date.now() - startTime;
-      mainWindow?.webContents.send('processing:complete', {
+      mainWindow?.webContents.send("processing:complete", {
         totalTime: processingTime,
         totalTokens: {
           sent: totalTokensSent,
-          received: totalTokensReceived
+          received: totalTokensReceived,
         },
         totalFiles: result.convertedFiles.length,
         totalSize: {
           original: totalOriginalSize,
-          processed: totalProcessedSize
-        }
+          processed: totalProcessedSize,
+        },
       });
 
       console.log("Processing completed successfully");
@@ -278,9 +291,9 @@ function setupIpcHandlers() {
           converted: result.convertedFiles.length,
           tokensProcessed: {
             sent: totalTokensSent,
-            received: totalTokensReceived
+            received: totalTokensReceived,
           },
-          processingTime
+          processingTime,
         },
       };
     } catch (error: any) {
@@ -355,34 +368,40 @@ function setupIpcHandlers() {
     }
   });
 
-  // Progress events  
-  ipcMain.on('minification-progress', (event, data) => {
+  // Progress events
+  ipcMain.on("minification-progress", (event, data) => {
     const { file, tokens, size, fileInfo } = data;
-    mainWindow?.webContents.send('update-log', {
-      type: 'minification',
-      message: `File: ${file}\nDetails: ${fileInfo || 'N/A'}\nTokens: ${tokens.before} → ${tokens.after}\nSize: ${size.before} → ${size.after}\n`
+    mainWindow?.webContents.send("update-log", {
+      type: "minification",
+      message: `File: ${file}\nDetails: ${fileInfo || "N/A"}\nTokens: ${
+        tokens.before
+      } → ${tokens.after}\nSize: ${size.before} → ${size.after}\n`,
     });
   });
 
-  ipcMain.on('conversion-progress', (event, data) => {
+  ipcMain.on("conversion-progress", (event, data) => {
     const { status, file, output, fileInfo, tokensInfo } = data;
-    let message = '';
-    
-    if (status === 'simplified') {
-      message = `Simplified file: ${file}\nDetails: ${fileInfo || 'N/A'}`;
-    } else if (status === 'converted') {
-      const tokensText = tokensInfo ? `\nTokens: ${tokensInfo.sent} sent / ${tokensInfo.received} received` : '';
-      message = `Converted file: ${file} → ${output}\nDetails: ${fileInfo || 'N/A'}${tokensText}`;
+    let message = "";
+
+    if (status === "simplified") {
+      message = `Simplified file: ${file}\nDetails: ${fileInfo || "N/A"}`;
+    } else if (status === "converted") {
+      const tokensText = tokensInfo
+        ? `\nTokens: ${tokensInfo.sent} sent / ${tokensInfo.received} received`
+        : "";
+      message = `Converted file: ${file} → ${output}\nDetails: ${
+        fileInfo || "N/A"
+      }${tokensText}`;
     }
-    
-    mainWindow?.webContents.send('update-log', {
-      type: 'conversion',
-      message
+
+    mainWindow?.webContents.send("update-log", {
+      type: "conversion",
+      message,
     });
   });
 
   // Handlers for file and folder manipulation by the AI agent
-  ipcMain.handle('agent:create-folder', async (_event, folderPath: string) => {
+  ipcMain.handle("agent:create-folder", async (_event, folderPath: string) => {
     try {
       await createFolder(folderPath);
       return { success: true };
@@ -391,7 +410,7 @@ function setupIpcHandlers() {
     }
   });
 
-  ipcMain.handle('agent:move', async (_event, src: string, dest: string) => {
+  ipcMain.handle("agent:move", async (_event, src: string, dest: string) => {
     try {
       await moveFileOrFolder(src, dest);
       return { success: true };
@@ -400,16 +419,19 @@ function setupIpcHandlers() {
     }
   });
 
-  ipcMain.handle('agent:rename', async (_event, oldPath: string, newPath: string) => {
-    try {
-      await renameFileOrFolder(oldPath, newPath);
-      return { success: true };
-    } catch (error) {
-      return { success: false, error: (error as Error).message };
+  ipcMain.handle(
+    "agent:rename",
+    async (_event, oldPath: string, newPath: string) => {
+      try {
+        await renameFileOrFolder(oldPath, newPath);
+        return { success: true };
+      } catch (error) {
+        return { success: false, error: (error as Error).message };
+      }
     }
-  });
+  );
 
-  ipcMain.handle('agent:delete', async (_event, targetPath: string) => {
+  ipcMain.handle("agent:delete", async (_event, targetPath: string) => {
     try {
       await deleteFileOrFolder(targetPath);
       return { success: true };
@@ -418,16 +440,19 @@ function setupIpcHandlers() {
     }
   });
 
-  ipcMain.handle('agent:write-file', async (_event, targetPath: string, content: string) => {
-    try {
-      await writeFile(targetPath, content);
-      return { success: true };
-    } catch (error) {
-      return { success: false, error: (error as Error).message };
+  ipcMain.handle(
+    "agent:write-file",
+    async (_event, targetPath: string, content: string) => {
+      try {
+        await writeFile(targetPath, content);
+        return { success: true };
+      } catch (error) {
+        return { success: false, error: (error as Error).message };
+      }
     }
-  });
+  );
 
-  ipcMain.handle('agent:read-file', async (_event, targetPath: string) => {
+  ipcMain.handle("agent:read-file", async (_event, targetPath: string) => {
     try {
       const content = await readFile(targetPath);
       return { success: true, content };
@@ -443,25 +468,31 @@ function setupIpcHandlers() {
       return { success: true, suggestions };
     } catch (error) {
       console.error("Error analyzing code with agent:", error);
-      return { 
-        success: false, 
-        error: (error as Error).message 
+      return {
+        success: false,
+        error: (error as Error).message,
       };
     }
   });
 
-  ipcMain.handle("execute-suggestions", async (_, suggestions, outputFolder) => {
-    try {
-      const results = await executeAgentSuggestions(suggestions, outputFolder);
-      return { success: true, results };
-    } catch (error) {
-      console.error("Error executing suggestions:", error);
-      return { 
-        success: false, 
-        error: (error as Error).message 
-      };
+  ipcMain.handle(
+    "execute-suggestions",
+    async (_, suggestions, outputFolder) => {
+      try {
+        const results = await executeAgentSuggestions(
+          suggestions,
+          outputFolder
+        );
+        return { success: true, results };
+      } catch (error) {
+        console.error("Error executing suggestions:", error);
+        return {
+          success: false,
+          error: (error as Error).message,
+        };
+      }
     }
-  });
+  );
 }
 
 /**
@@ -503,7 +534,10 @@ function validateProcessOptions(options: any) {
   }
 
   // Check if Llama API has the URL provided
-  if (options.conversionOptions.provider === "llama" && !options.conversionOptions.apiUrl) {
+  if (
+    options.conversionOptions.provider === "llama" &&
+    !options.conversionOptions.apiUrl
+  ) {
     throw new Error("Llama API URL not provided");
   }
 }

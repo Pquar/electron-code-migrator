@@ -181,13 +181,13 @@
               </div>
 
               <div class="mb-6">
-                <label class="block text-sm font-medium mb-1">Linguagem de Destino</label>
+                <label class="block text-sm font-medium mb-1">Target Language</label>
                 <div class="flex gap-2">
                   <select
                     id="targetLanguage"
                     class="w-3/4 border border-gray-300 rounded px-4 py-2"
                   >
-                    <option value="">Selecione a linguagem</option>
+                    <option value="">Select language</option>
                     <option value="javascript">JavaScript</option>
                     <option value="typescript">TypeScript</option>
                     <option value="python">Python</option>
@@ -205,7 +205,7 @@
                     type="text"
                     id="customLanguage"
                     class="w-1/4 border border-gray-300 rounded px-4 py-2"
-                    placeholder="Linguagem personalizada"
+                    placeholder="Custom language"
                   />
                 </div>
               </div>
@@ -231,18 +231,18 @@
             </div>
 
             <div class="mt-6 mb-4" id="customPromptContainer">
-              <label class="block text-sm font-medium mb-2">Prompt de Conversão</label>
+              <label class="block text-sm font-medium mb-2">Conversion Prompt</label>
               <div class="flex flex-col">
                 <textarea
                   id="conversionPrompt"
                   class="w-full h-64 font-mono text-sm border border-gray-300 rounded px-4 py-2"
-                  placeholder="Digite o prompt personalizado para a conversão..."
+                  placeholder="Enter a custom prompt for code conversion..."
                 ></textarea>
                 <button
                   id="resetPrompt"
                   class="mt-2 text-blue-600 hover:text-blue-800 text-sm font-medium self-end"
                 >
-                  Restaurar prompt padrão
+                  Restore default prompt
                 </button>
               </div>
             </div>
@@ -641,6 +641,41 @@
             </div>
             
             <div id="iaAgentPanel" class="border border-gray-200 rounded-lg p-4">
+              <div class="mb-4">
+                <label class="block text-sm font-medium mb-1">AI Provider</label>
+                <select
+                  id="iaProvider"
+                  class="w-full border border-gray-300 rounded px-4 py-2"
+                >
+                  <option value="openai">OpenAI (GPT-4)</option>
+                  <option value="gemini">Google Gemini</option>
+                  <option value="anthropic">Anthropic (Claude-3)</option>
+                  <option value="llama">API</option>
+                  <option value="llama-local">Llama Local</option>
+                </select>
+              </div>
+
+              <div class="mb-4" id="iaApiKeyContainer">
+                <label class="block text-sm font-medium mb-1">API Key</label>
+                <input
+                  type="password"
+                  id="iaApiKey"
+                  class="w-full border border-gray-300 rounded px-4 py-2"
+                  placeholder="Enter your API key"
+                />
+              </div>
+
+              <div class="mb-4" id="iaApiUrlContainer" style="display: none">
+                <label class="block text-sm font-medium mb-1">API URL</label>
+                <input
+                  type="text"
+                  id="iaApiUrl"
+                  class="w-full border border-gray-300 rounded px-4 py-2"
+                  placeholder="Enter API URL"
+                  value="http://127.0.0.1:11434/api/generate"
+                />
+              </div>
+
               <button
                 id="btnAnalyzeWithIA"
                 class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded flex items-center"
