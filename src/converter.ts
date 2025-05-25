@@ -7,27 +7,26 @@ import fs from 'fs';
 import path from 'path';
 
 /**
- * Converte código de uma linguagem para outra usando o provedor de IA especificado
- * @param code Código fonte a ser convertido
- * @param fileExtension Extensão do arquivo de origem
- * @param options Opções de conversão
- * @returns Objeto com código convertido e métricas
+ * Converts code from one language to another using the specified AI provider
+ * @param code Source code to be converted
+ * @param fileExtension Source file extension
+ * @param options Conversion options
+ * @returns Object with converted code and metrics
  */
 export async function convertCode(
   code: string,
   fileExtension: string,
   options: ConversionOptions
 ): Promise<ConversionResult> {
-  // Determina a linguagem de origem baseada na extensão do arquivo
+  // Determine source language based on file extension
   const sourceLanguage = getLanguageFromExtension(fileExtension);
   
-  // Registra a tentativa de conversão
-  console.log(`Convertendo de ${sourceLanguage} para ${options.targetLanguage} usando ${options.provider}`);
+  // Log conversion attempt
+  console.log(`Converting from ${sourceLanguage} to ${options.targetLanguage} using ${options.provider}`);
   
-  // Iniciar contador de tempo
+  // Start time counter
   const startTime = Date.now();
-  
-  try {
+    try {
     let result: ConversionResult;
     
     switch (options.provider) {
@@ -45,20 +44,19 @@ export async function convertCode(
         result = await convertWithLLama(code, sourceLanguage, options);
         break;
       default:
-        throw new Error(`Provedor de IA não suportado: ${options.provider}`);
+        throw new Error(`Unsupported AI provider: ${options.provider}`);
     }
     
-    // Calcular tempo total de processamento se ainda não foi calculado
+    // Calculate total processing time if not already calculated
     if (result.metrics && !result.metrics.processingTime) {
       result.metrics.processingTime = Date.now() - startTime;
     }
     
-    return result;
-  } catch (error: any) {
-    console.error(`Erro na conversão usando ${options.provider}:`, error);
-    // Retornar o código original em caso de falha, com um comentário explicativo
+    return result;  } catch (error: any) {
+    console.error(`Conversion error using ${options.provider}:`, error);
+    // Return original code in case of failure, with an explanatory comment
     return {
-      code: `// ERRO DE CONVERSÃO: ${error.message}\n\n${code}`,
+      code: `// CONVERSION ERROR: ${error.message}\n\n${code}`,
       metrics: {
         tokens: { sent: estimateTokenCount(code), received: 0 },
         processingTime: Date.now() - startTime
@@ -68,7 +66,7 @@ export async function convertCode(
 }
 
 /**
- * Converte código usando a API OpenAI
+ * Convert code using OpenAI API
  */
 async function convertWithOpenAI(
   code: string,
@@ -76,7 +74,7 @@ async function convertWithOpenAI(
   options: ConversionOptions
 ): Promise<ConversionResult> {
   if (!options.apiKey) {
-    throw new Error("API Key da OpenAI não fornecida");
+    throw new Error("OpenAI API Key not provided");
   }
 
   const client = new OpenAI({
@@ -111,15 +109,14 @@ async function convertWithOpenAI(
         tokens: tokenMetrics,
         processingTime: Date.now() - startTime
       }
-    };
-  } catch (error: any) {
-    console.error("Erro ao chamar a API OpenAI:", error);
-    throw new Error(`Falha ao converter o código usando OpenAI: ${error.message}`);
+    };  } catch (error: any) {
+    console.error("Error calling OpenAI API:", error);
+    throw new Error(`Failed to convert code using OpenAI: ${error.message}`);
   }
 }
 
 /**
- * Converte código usando a API Gemini
+ * Convert code using Gemini API
  */
 async function convertWithGemini(
   code: string,
@@ -127,7 +124,7 @@ async function convertWithGemini(
   options: ConversionOptions
 ): Promise<ConversionResult> {
   if (!options.apiKey) {
-    throw new Error("API Key do Gemini não fornecida");
+    throw new Error("Gemini API Key not provided");
   }
 
   const apiUrl = "https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent";
@@ -159,8 +156,7 @@ async function convertWithGemini(
     const convertedCode = response.data.candidates[0]?.content?.parts[0]?.text || code;
     const sanitizedCode = sanitizeCode(convertedCode);
     const outputTokens = estimateTokenCount(sanitizedCode);
-    
-    // Gemini não retorna contagens de tokens de forma direta, então usamos nossa estimativa
+      // Gemini doesn't directly return token counts, so we use our estimate
     const tokenMetrics: TokenMetrics = {
       sent: promptTokens,
       received: outputTokens
@@ -174,13 +170,13 @@ async function convertWithGemini(
       }
     };
   } catch (error: any) {
-    console.error("Erro ao chamar a API Gemini:", error);
-    throw new Error(`Falha ao converter o código usando Gemini: ${error.message}`);
+    console.error("Error calling Gemini API:", error);
+    throw new Error(`Failed to convert code using Gemini: ${error.message}`);
   }
 }
 
 /**
- * Converte código usando a API Anthropic
+ * Convert code using Anthropic API
  */
 async function convertWithAnthropic(
   code: string,
@@ -188,7 +184,7 @@ async function convertWithAnthropic(
   options: ConversionOptions
 ): Promise<ConversionResult> {
   if (!options.apiKey) {
-    throw new Error("API Key da Anthropic não fornecida");
+    throw new Error("Anthropic API Key not provided");
   }
 
   const anthropic = new Anthropic({
@@ -238,15 +234,14 @@ async function convertWithAnthropic(
         tokens: tokenMetrics,
         processingTime: Date.now() - startTime
       }
-    };
-  } catch (error: any) {
-    console.error("Erro ao chamar a API Anthropic:", error);
-    throw new Error(`Falha ao converter o código usando Anthropic: ${error.message}`);
+    };  } catch (error: any) {
+    console.error("Error calling Anthropic API:", error);
+    throw new Error(`Failed to convert code using Anthropic: ${error.message}`);
   }
 }
 
 /**
- * Converte código usando o LLama (local ou API)
+ * Convert code using LLama (local or API)
  */
 async function convertWithLLama(
   code: string,
@@ -261,12 +256,12 @@ async function convertWithLLama(
     let convertedCode: string;
     
     if (options.provider === "llama") {
-      // Valida configurações da API
+      // Validate API settings
       if (!options.apiUrl) {
-        throw new Error("URL da API Llama não fornecida");
+        throw new Error("Llama API URL not provided");
       }
       if (!options.apiKey) {
-        throw new Error("API Key do Llama não fornecida");
+        throw new Error("Llama API Key not provided");
       }
 
       // Chama a versão da API HTTP
@@ -278,8 +273,7 @@ async function convertWithLLama(
     
     const sanitizedCode = sanitizeCode(convertedCode);
     const outputTokens = estimateTokenCount(sanitizedCode);
-    
-    // Llama não retorna contagens de tokens, então usamos nossa estimativa
+      // Llama doesn't return token counts, so we use our estimate
     const tokenMetrics: TokenMetrics = {
       sent: promptTokens,
       received: outputTokens
@@ -293,13 +287,13 @@ async function convertWithLLama(
       }
     };
   } catch (error: any) {
-    console.error(`Erro ao converter com ${options.provider === "llama" ? "API" : "local"} Llama:`, error);
-    throw new Error(`Falha ao converter o código usando ${options.provider === "llama" ? "API" : "local"} Llama: ${error.message}`);
+    console.error(`Error converting with ${options.provider === "llama" ? "API" : "local"} Llama:`, error);
+    throw new Error(`Failed to convert code using ${options.provider === "llama" ? "API" : "local"} Llama: ${error.message}`);
   }
 }
 
 /**
- * Cria um prompt adequado para a conversão de código
+ * Creates an appropriate prompt for code conversion
  */
 function createConversionPrompt(
   code: string,

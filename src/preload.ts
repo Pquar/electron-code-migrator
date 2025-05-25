@@ -1,32 +1,32 @@
 // preload.ts
 import { contextBridge, ipcRenderer } from 'electron';
 
-// Expõe as funções seguras para o processo de renderização
+// Expose secure functions to the renderer process
 contextBridge.exposeInMainWorld('api', {
-  // Esta função permite selecionar uma pasta
+  // This function allows selecting a folder
   selectFolder: async () => {
     try {
       return await ipcRenderer.invoke('select-folder');
     } catch (error) {
-      console.error('Erro ao selecionar pasta:', error);
+      console.error('Error selecting folder:', error);
       return null;
     }
   },
-  // Esta função realiza a minificação dos arquivos
+  // This function performs file minification
   minifyFiles: async (options: any) => {
     try {
       return await ipcRenderer.invoke('minify-files', options);
     } catch (error) {
-      console.error('Erro ao minificar arquivos:', error);
+      console.error('Error minifying files:', error);
       throw error;
     }
   },
-  // Esta função processa o código com as opções especificadas
+  // This function processes code with the specified options
   processCode: async (options: any) => {
     try {
       return await ipcRenderer.invoke('process-code', options);
     } catch (error) {
-      console.error('Erro ao processar código:', error);
+      console.error('Error processing code:', error);
       throw error;
     }
   }
@@ -39,13 +39,13 @@ contextBridge.exposeInMainWorld("electronAPI", {
   },
 });
 
-// Expor eventos de log
+// Expose log events
 contextBridge.exposeInMainWorld('logger', {
   onLogUpdate: (callback: (data: { type: string; message: string }) => void) => {
     ipcRenderer.on('update-log', (_event, data) => callback(data));
   },
   
-  // Eventos para minificação
+  // Events for minification
   onMinifyStart: (callback: (data: { totalFiles: number }) => void) => {
     ipcRenderer.on('minify:start', (_event, data) => callback(data));
   },
@@ -72,7 +72,7 @@ contextBridge.exposeInMainWorld('logger', {
     ipcRenderer.on('minify:complete', (_event, data) => callback(data));
   },
   
-  // Eventos para processamento/conversão de código
+  // Events for code processing/conversion
   onFileProcessingStart: (callback: (data: { totalFiles: number }) => void) => {
     ipcRenderer.on('processing:start', (_event, data) => callback(data));
   },
@@ -105,13 +105,13 @@ contextBridge.exposeInMainWorld('agent', {
   readFile: async (targetPath: string) => ipcRenderer.invoke('agent:read-file', targetPath),
 });
 
-// Interface para Agente Inteligente de IA
+// Interface for AI Intelligent Agent
 contextBridge.exposeInMainWorld('iaAgent', {
   analyzeCode: async (options: any, files: any[]) => {
     try {
       return await ipcRenderer.invoke('analyze-code', options, files);
     } catch (error) {
-      console.error('Erro ao analisar código com agente IA:', error);
+      console.error('Error analyzing code with AI agent:', error);
       throw error;
     }
   },
@@ -119,7 +119,7 @@ contextBridge.exposeInMainWorld('iaAgent', {
     try {
       return await ipcRenderer.invoke('execute-suggestions', suggestions, outputFolder);
     } catch (error) {
-      console.error('Erro ao executar sugestões do agente IA:', error);
+      console.error('Error executing AI agent suggestions:', error);
       throw error;
     }
   }

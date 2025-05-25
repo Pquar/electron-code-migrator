@@ -38,39 +38,39 @@ function createWindow() {
 
   if (process.env.NODE_ENV === "development") {
     mainWindow.webContents.openDevTools();
-    console.log("Modo de desenvolvimento ativo: DevTools aberto");
+    console.log("Development mode active: DevTools opened");
   }
 
-  // Ao fechar a janela, liberar a referência
+  // Release the window reference when closing
   mainWindow.on("closed", () => {
     mainWindow = null;
   });
 }
 
-// Inicialização do aplicativo
+// Application initialization
 app
   .whenReady()
   .then(() => {
-    // Criar a janela principal
+    // Create the main window
     createWindow();
 
-    // No macOS, é comum recriar a janela quando o ícone do dock é clicado
+    // On macOS, it's common to recreate the window when the dock icon is clicked
     app.on("activate", () => {
       if (BrowserWindow.getAllWindows().length === 0) {
         createWindow();
       }
     });
 
-    // Configurar handlers IPC após a aplicação estar pronta
+    // Set up IPC handlers after the application is ready
     setupIpcHandlers();
 
-    console.log("Aplicativo iniciado");
+    console.log("Application started");
   })
   .catch((error) => {
-    console.error("Erro ao iniciar o aplicativo:", error);
+    console.error("Error starting application:", error);
   });
 
-// Fechar o aplicativo quando todas as janelas forem fechadas (exceto no macOS)
+// Close the application when all windows are closed (except on macOS)
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") {
     app.quit();
@@ -78,55 +78,55 @@ app.on("window-all-closed", () => {
 });
 
 /**
- * Configura todos os manipuladores de eventos IPC
+ * Sets up all IPC event handlers
  */
 function setupIpcHandlers() {
-  // Handler para selecionar pasta
+  // Handler for folder selection
   ipcMain.handle("select-folder", async () => {
     if (!mainWindow) return null;
 
     try {
       const result = await dialog.showOpenDialog(mainWindow, {
         properties: ["openDirectory"],
-        buttonLabel: "Selecionar Pasta"
+        buttonLabel: "Select Folder"
       });
 
       const dialogResult = result as unknown as { canceled: boolean; filePaths: string[] };
       return dialogResult.canceled ? null : dialogResult.filePaths[0];
     } catch (error) {
-      console.error("Erro ao selecionar pasta:", error);
+      console.error("Error selecting folder:", error);
       return null;
     }
   });
 
-  // Handler para minificar os arquivos
+  // Handler for minifying files
   ipcMain.handle("minify-files", async (_, options) => {
     console.log(
-      "Iniciando minificação de arquivos com opções:",
+      "Starting file minification with options:",
       JSON.stringify(options, null, 2)
     );
 
     try {
-      // Validar opções recebidas
+      // Validate received options
       validateProcessOptions(options);
 
-      // Configurar listeners para eventos de progresso da minificação
+      // Set up listeners for minification progress events
       const startTime = Date.now();
       let filesProcessed = 0;
       let totalFiles = 0;
       let originalTotalSize = 0;
       let minifiedTotalSize = 0;
       
-      // Processar eventos de minificação
+      // Process minification events
       process.on('message', (message: any) => {
         if (message.type === 'minification-file-count') {
           totalFiles = message.count;
-          // Emitir evento de início da minificação com contagem total de arquivos
+          // Emit start event for minification with total file count
           mainWindow?.webContents.send('minify:start', { totalFiles });
         } else if (message.type === 'minification-progress') {
           filesProcessed++;
           
-          // Atualizar tamanhos totais para cálculo de redução
+          // Update total sizes for reduction calculation
           if (message.data.size) {
             const originalSize = typeof message.data.size.beforeBytes === 'number' 
               ? message.data.size.beforeBytes 
@@ -140,7 +140,7 @@ function setupIpcHandlers() {
             minifiedTotalSize += minifiedSize;
           }
           
-          // Emitir evento de progresso da minificação
+          // Emit minification progress event
           mainWindow?.webContents.send('minify:progress', {
             file: message.data.file,
             processed: filesProcessed,
@@ -151,18 +151,18 @@ function setupIpcHandlers() {
             minifiedSize: minifiedTotalSize
           });
           
-          // Emitir evento de log para manter compatibilidade
+          // Emit log event to maintain compatibility
           mainWindow?.webContents.send('update-log', {
             type: 'minify',
-            message: `Minificando: ${message.data.file} (${filesProcessed}/${totalFiles})`
+            message: `Minifying: ${message.data.file} (${filesProcessed}/${totalFiles})`
           });
         }
       });
 
-      // Processar arquivos - apenas etapa de minificação
+      // Process files - minification step only
       const result = await minifyFiles(options);
       
-      // Emitir evento de conclusão da minificação com métricas
+      // Emit minification completion event with metrics
       const processingTime = Date.now() - startTime;
       mainWindow?.webContents.send('minify:complete', {
         totalTime: processingTime,
@@ -174,7 +174,7 @@ function setupIpcHandlers() {
         minifiedTokens: result.totalMinifiedTokens
       });
 
-      console.log("Minificação concluída com sucesso");
+      console.log("Minification completed successfully");
       return {
         success: true,
         result,
@@ -184,7 +184,7 @@ function setupIpcHandlers() {
         },
       };
     } catch (error: any) {
-      console.error("Erro durante a minificação:", error);
+      console.error("Error during minification:", error);
       return {
         success: false,
         error: error.message,
@@ -192,18 +192,18 @@ function setupIpcHandlers() {
       };
     }
   });
-  // Handler para processar código
+  // Handler for processing code
   ipcMain.handle("process-code", async (_, options) => {
     console.log(
-      "Iniciando processamento de código com opções:",
+      "Starting code processing with options:",
       JSON.stringify(options, null, 2)
     );
 
     try {
-      // Validar opções recebidas
+      // Validate received options
       validateProcessOptions(options);
       
-      // Configurar listeners para eventos de progresso
+      // Set up listeners for progress events
       const startTime = Date.now();
       let totalTokensSent = 0;
       let totalTokensReceived = 0;
@@ -212,7 +212,7 @@ function setupIpcHandlers() {
       let totalOriginalSize = 0;
       let totalProcessedSize = 0;
       
-      // Processar eventos de progresso
+      // Process progress events
       process.on('message', (message: any) => {
         if (message.type === 'file-count') {
           totalFilesEstimate = message.count;
@@ -224,7 +224,7 @@ function setupIpcHandlers() {
             totalTokensSent += message.data.tokensInfo.sent || 0;
             totalTokensReceived += message.data.tokensInfo.received || 0;
           }
-            // Calcular tamanho do arquivo
+            // Calculate file size
           let fileSizeInfo: { original: number, processed: number } | undefined;
           
           if (message.data.fileSize) {
@@ -233,7 +233,7 @@ function setupIpcHandlers() {
             totalProcessedSize += message.data.fileSize.processed || 0;
           }
           
-          // Enviar evento de progresso com todos os detalhes
+          // Send progress event with all details
           mainWindow?.webContents.send('processing:file-processed', {
             file: message.data.file,
             completed: filesProcessed,
@@ -243,18 +243,18 @@ function setupIpcHandlers() {
             progress: Math.floor((filesProcessed / totalFilesEstimate) * 100)
           });
           
-          // Emitir evento de log para manter compatibilidade
+          // Emit log event to maintain compatibility
           mainWindow?.webContents.send('update-log', {
             type: 'process',
-            message: `Processando: ${message.data.file} (${filesProcessed}/${totalFilesEstimate})`
+            message: `Processing: ${message.data.file} (${filesProcessed}/${totalFilesEstimate})`
           });
         }
       });
 
-      // Processar arquivos com a nova API
+      // Process files with the new API
       const result = await processFiles(options);
       
-      // Enviar evento de conclusão com métricas
+      // Send completion event with metrics
       const processingTime = Date.now() - startTime;
       mainWindow?.webContents.send('processing:complete', {
         totalTime: processingTime,
@@ -269,7 +269,7 @@ function setupIpcHandlers() {
         }
       });
 
-      console.log("Processamento concluído com sucesso");
+      console.log("Processing completed successfully");
       return {
         success: true,
         result,
@@ -284,7 +284,7 @@ function setupIpcHandlers() {
         },
       };
     } catch (error: any) {
-      console.error("Erro durante o processamento:", error);
+      console.error("Error during processing:", error);
       return {
         success: false,
         error: error.message,
@@ -293,7 +293,7 @@ function setupIpcHandlers() {
     }
   });
 
-  // Handler para verificar se o modelo LLama existe
+  // Handler to check if the LLama model exists
   ipcMain.handle("check-llama-model", async () => {
     const modelPath = path.resolve(
       process.env.NODE_ENV === "development"
@@ -309,7 +309,7 @@ function setupIpcHandlers() {
         path: modelPath,
       };
     } catch (error) {
-      console.error("Erro ao verificar modelo LLama:", error);
+      console.error("Error checking LLama model:", error);
       return {
         exists: false,
         error: (error as Error).message,
@@ -317,7 +317,7 @@ function setupIpcHandlers() {
     }
   });
 
-  // Handler para salvar configurações
+  // Handler to save settings
   ipcMain.handle("save-settings", async (_, settings) => {
     try {
       const userDataPath = app.getPath("userData");
@@ -326,7 +326,7 @@ function setupIpcHandlers() {
       await fs.writeJson(settingsPath, settings, { spaces: 2 });
       return { success: true };
     } catch (error) {
-      console.error("Erro ao salvar configurações:", error);
+      console.error("Error saving settings:", error);
       return {
         success: false,
         error: (error as Error).message,
@@ -334,7 +334,7 @@ function setupIpcHandlers() {
     }
   });
 
-  // Handler para carregar configurações
+  // Handler to load settings
   ipcMain.handle("load-settings", async () => {
     try {
       const userDataPath = app.getPath("userData");
@@ -347,7 +347,7 @@ function setupIpcHandlers() {
 
       return { success: true, settings: {} };
     } catch (error) {
-      console.error("Erro ao carregar configurações:", error);
+      console.error("Error loading settings:", error);
       return {
         success: false,
         error: (error as Error).message,
@@ -355,23 +355,24 @@ function setupIpcHandlers() {
     }
   });
 
-  // Eventos de progresso  
+  // Progress events  
   ipcMain.on('minification-progress', (event, data) => {
     const { file, tokens, size, fileInfo } = data;
     mainWindow?.webContents.send('update-log', {
       type: 'minification',
-      message: `Arquivo: ${file}\nDetalhes: ${fileInfo || 'N/A'}\nTokens: ${tokens.before} → ${tokens.after}\nTamanho: ${size.before} → ${size.after}\n`
+      message: `File: ${file}\nDetails: ${fileInfo || 'N/A'}\nTokens: ${tokens.before} → ${tokens.after}\nSize: ${size.before} → ${size.after}\n`
     });
   });
+
   ipcMain.on('conversion-progress', (event, data) => {
     const { status, file, output, fileInfo, tokensInfo } = data;
     let message = '';
     
     if (status === 'simplified') {
-      message = `Arquivo simplificado: ${file}\nDetalhes: ${fileInfo || 'N/A'}`;
+      message = `Simplified file: ${file}\nDetails: ${fileInfo || 'N/A'}`;
     } else if (status === 'converted') {
-      const tokensText = tokensInfo ? `\nTokens: ${tokensInfo.sent} enviados / ${tokensInfo.received} recebidos` : '';
-      message = `Arquivo convertido: ${file} → ${output}\nDetalhes: ${fileInfo || 'N/A'}${tokensText}`;
+      const tokensText = tokensInfo ? `\nTokens: ${tokensInfo.sent} sent / ${tokensInfo.received} received` : '';
+      message = `Converted file: ${file} → ${output}\nDetails: ${fileInfo || 'N/A'}${tokensText}`;
     }
     
     mainWindow?.webContents.send('update-log', {
@@ -380,7 +381,7 @@ function setupIpcHandlers() {
     });
   });
 
-  // Handlers para manipulação de arquivos e pastas pelo agente IA
+  // Handlers for file and folder manipulation by the AI agent
   ipcMain.handle('agent:create-folder', async (_event, folderPath: string) => {
     try {
       await createFolder(folderPath);
@@ -435,13 +436,13 @@ function setupIpcHandlers() {
     }
   });
 
-  // Handlers para funcionalidades do agente IA
+  // Handlers for AI agent functionalities
   ipcMain.handle("analyze-code", async (_, options, files) => {
     try {
       const suggestions = await analyzeCodeWithAgent(options, files);
       return { success: true, suggestions };
     } catch (error) {
-      console.error("Erro ao analisar código com agente:", error);
+      console.error("Error analyzing code with agent:", error);
       return { 
         success: false, 
         error: (error as Error).message 
@@ -454,7 +455,7 @@ function setupIpcHandlers() {
       const results = await executeAgentSuggestions(suggestions, outputFolder);
       return { success: true, results };
     } catch (error) {
-      console.error("Erro ao executar sugestões:", error);
+      console.error("Error executing suggestions:", error);
       return { 
         success: false, 
         error: (error as Error).message 
@@ -464,45 +465,45 @@ function setupIpcHandlers() {
 }
 
 /**
- * Valida as opções recebidas do frontend
+ * Validates the options received from the frontend
  */
 function validateProcessOptions(options: any) {
   if (!options) {
-    throw new Error("Opções de processamento não fornecidas");
+    throw new Error("Processing options not provided");
   }
 
   if (!options.sourceFolder) {
-    throw new Error("Pasta de origem não especificada");
+    throw new Error("Source folder not specified");
   }
 
   if (!options.tempFolder) {
-    throw new Error("Pasta temporária não especificada");
+    throw new Error("Temporary folder not specified");
   }
 
   if (!options.outputFolder) {
-    throw new Error("Pasta de saída não especificada");
+    throw new Error("Output folder not specified");
   }
 
   if (!options.conversionOptions?.targetLanguage) {
-    throw new Error("Linguagem alvo não especificada");
+    throw new Error("Target language not specified");
   }
 
   if (!options.conversionOptions?.provider) {
-    throw new Error("Provedor de IA não especificado");
+    throw new Error("AI provider not specified");
   }
 
-  // Verificar se a API Key foi fornecida para provedores que precisam  // Verifica se os provedores que precisam de API Key a forneceram
+  // Check if API Key is provided for providers that need it
   const needsApiKey = ["openai", "gemini", "anthropic", "llama"].includes(
     options.conversionOptions.provider
   );
   if (needsApiKey && !options.conversionOptions.apiKey) {
     throw new Error(
-      `API Key não fornecida para o provedor ${options.conversionOptions.provider}`
+      `API Key not provided for provider ${options.conversionOptions.provider}`
     );
   }
 
-  // Verifica se o Llama API tem a URL fornecida
+  // Check if Llama API has the URL provided
   if (options.conversionOptions.provider === "llama" && !options.conversionOptions.apiUrl) {
-    throw new Error("URL da API Llama não fornecida");
+    throw new Error("Llama API URL not provided");
   }
 }

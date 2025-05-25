@@ -2,7 +2,7 @@ export interface ConversionOptions {
   targetLanguage: string;
   provider: "openai" | "gemini" | "anthropic" | "llama" | "llama-local";
   apiKey?: string;
-  apiUrl?: string;  // URL da API para provedores que necessitam
+  apiUrl?: string;  // API URL for providers that require it
 }
 
 export interface ProcessOptions {

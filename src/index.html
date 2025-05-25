@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Processador de Código</title>
+    <title>Code Processor</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
       .step-indicator {
@@ -23,54 +23,43 @@
   <body class="bg-gray-100 min-h-screen">
     <div class="container mx-auto px-4 py-8">
       <h1 class="text-3xl font-bold text-center mb-8">
-        Processador de Código em Etapas
+        Step-by-Step Code Processor
       </h1>
 
       <div id="app" class="bg-white rounded-lg shadow-lg p-6">
-        <!-- Indicadores de Etapas -->
+        <!-- Step Indicators -->
         <div class="flex items-center justify-between mb-8 px-4">
           <div class="flex flex-col items-center">
             <div id="step1-indicator" class="step-indicator step-active">1</div>
-            <span class="text-sm mt-2">Selecionar Pasta</span>
+            <span class="text-sm mt-2">Select Folder</span>
           </div>
           <div class="h-0.5 flex-1 bg-gray-300 mx-2" id="line1"></div>
           <div class="flex flex-col items-center">
-            <div id="step2-indicator" class="step-indicator step-pending">
-              2
-            </div>
-            <span class="text-sm mt-2">Configurar</span>
+            <div id="step2-indicator" class="step-indicator step-pending">2</div>
+            <span class="text-sm mt-2">Configure</span>
           </div>
           <div class="h-0.5 flex-1 bg-gray-300 mx-2" id="line2"></div>
           <div class="flex flex-col items-center">
-            <div id="step3-indicator" class="step-indicator step-pending">
-              3
-            </div>
-            <span class="text-sm mt-2">Minificar</span>
+            <div id="step3-indicator" class="step-indicator step-pending">3</div>
+            <span class="text-sm mt-2">Minify</span>
           </div>
           <div class="h-0.5 flex-1 bg-gray-300 mx-2" id="line3"></div>
           <div class="flex flex-col items-center">
-            <div id="step4-indicator" class="step-indicator step-pending">
-              4
-            </div>
-            <span class="text-sm mt-2">Converter</span>
+            <div id="step4-indicator" class="step-indicator step-pending">4</div>
+            <span class="text-sm mt-2">Convert</span>
           </div>
           <div class="h-0.5 flex-1 bg-gray-300 mx-2" id="line4"></div>
           <div class="flex flex-col items-center">
-            <div id="step5-indicator" class="step-indicator step-pending">
-              5
-            </div>
-            <span class="text-sm mt-2">Resultados</span>
+            <div id="step5-indicator" class="step-indicator step-pending">5</div>
+            <span class="text-sm mt-2">Results</span>
           </div>
         </div>
 
-        <!-- Conteúdo das Etapas -->
+        <!-- Step Contents -->
         <div id="step1" class="step-content">
-          <h2 class="text-xl font-semibold mb-4">
-            Etapa 1: Selecionar Pasta Base
-          </h2>
+          <h2 class="text-xl font-semibold mb-4">Step 1: Select Base Folder</h2>
           <p class="mb-4">
-            Selecione a pasta que contém o código original que você deseja
-            processar.
+            Select the folder containing the original code you want to process.
           </p>
 
           <div class="flex items-center mb-6">
@@ -78,14 +67,14 @@
               type="text"
               id="sourceFolder"
               class="flex-1 border border-gray-300 rounded-l px-4 py-2"
-              placeholder="Caminho da pasta base"
+              placeholder="Base folder path"
               readonly
             />
             <button
               id="selectSourceFolder"
               class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-r"
             >
-              Selecionar
+              Select
             </button>
           </div>
 
@@ -95,65 +84,61 @@
               class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded disabled:bg-gray-400"
               disabled
             >
-              Próximo
+              Next
             </button>
           </div>
         </div>
 
         <div id="step2" class="step-content hidden">
           <h2 class="text-xl font-semibold mb-4">
-            Etapa 2: Configurar Processamento
+            Step 2: Configure Processing
           </h2>
 
           <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div class="border border-gray-200 rounded-lg p-4">
-              <h3 class="font-semibold mb-3">Pastas de Saída</h3>
+              <h3 class="font-semibold mb-3">Output Folders</h3>
 
               <div class="mb-4">
-                <label class="block text-sm font-medium mb-1"
-                  >Pasta Intermediária</label
-                >
+                <label class="block text-sm font-medium mb-1">Intermediate Folder</label>
                 <div class="flex">
                   <input
                     type="text"
                     id="tempFolder"
                     class="flex-1 border border-gray-300 rounded-l px-4 py-2"
-                    placeholder="Caminho para pasta intermediária"
+                    placeholder="Intermediate folder path"
                     readonly
                   />
                   <button
                     id="selectTempFolder"
                     class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-r"
                   >
-                    Selecionar
+                    Select
                   </button>
                 </div>
               </div>
 
               <div class="mb-4">
-                <label class="block text-sm font-medium mb-1"
-                  >Pasta de Saída Final</label
-                >
+                <label class="block text-sm font-medium mb-1">Final Output Folder</label>
                 <div class="flex">
                   <input
                     type="text"
                     id="outputFolder"
                     class="flex-1 border border-gray-300 rounded-l px-4 py-2"
-                    placeholder="Caminho para pasta de saída"
+                    placeholder="Output folder path"
                     readonly
                   />
                   <button
                     id="selectOutputFolder"
                     class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-r"
                   >
-                    Selecionar
+                    Select
                   </button>
                 </div>
               </div>
             </div>
 
             <div class="border border-gray-200 rounded-lg p-4">
-              <h3 class="font-semibold mb-3">Opções de Simplificação</h3>
+              <h3 class="font-semibold mb-3">Simplification Options</h3>
 
               <div class="flex items-center mb-3">
                 <input
@@ -162,29 +147,27 @@
                   class="mr-2"
                   checked
                 />
-                <label for="removeComments">Remover comentários</label>
+                <label for="removeComments">Remove comments</label>
               </div>
 
               <div class="flex items-center mb-3">
                 <input type="checkbox" id="reduceKeywords" class="mr-2" />
-                <label for="reduceKeywords">Reduzir palavras-chave</label>
+                <label for="reduceKeywords">Reduce keywords</label>
               </div>
 
               <div class="flex items-center">
                 <input type="checkbox" id="minify" class="mr-2" />
-                <label for="minify">Minificar levemente o código</label>
+                <label for="minify">Slightly minify code</label>
               </div>
             </div>
           </div>
 
           <div class="mt-8 border border-gray-200 rounded-lg p-4">
-            <h3 class="font-semibold mb-3">Opções de Conversão</h3>
+            <h3 class="font-semibold mb-3">Conversion Options</h3>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label class="block text-sm font-medium mb-1"
-                  >Provedor de IA</label
-                >
+                <label class="block text-sm font-medium mb-1">AI Provider</label>
                 <select
                   id="provider"
                   class="w-full border border-gray-300 rounded px-4 py-2"
@@ -198,9 +181,7 @@
               </div>
 
               <div>
-                <label class="block text-sm font-medium mb-1"
-                  >Linguagem Alvo</label
-                >
+                <label class="block text-sm font-medium mb-1">Target Language</label>
                 <select
                   id="targetLanguage"
                   class="w-full border border-gray-300 rounded px-4 py-2"
@@ -220,22 +201,22 @@
             </div>
 
             <div class="mt-4">
-              <label class="block text-sm font-medium mb-1">Chave de API</label>
+              <label class="block text-sm font-medium mb-1">API Key</label>
               <input
                 type="password"
                 id="apiKey"
                 class="w-full border border-gray-300 rounded px-4 py-2"
-                placeholder="Insira sua chave de API"
+                placeholder="Enter your API key"
               />
             </div>
 
             <div class="mt-4" id="apiUrlContainer" style="display: none">
-              <label class="block text-sm font-medium mb-1">URL da API</label>
+              <label class="block text-sm font-medium mb-1">API URL</label>
               <input
                 type="text"
                 id="apiUrl"
                 class="w-full border border-gray-300 rounded px-4 py-2"
-                placeholder="Insira a URL da API Llama"
+                placeholder="Enter Llama API URL"
               />
             </div>
           </div>
@@ -245,89 +226,83 @@
               id="prevStep2"
               class="border border-gray-300 bg-white hover:bg-gray-100 text-gray-800 px-6 py-2 rounded"
             >
-              Anterior
+              Previous
             </button>
             <button
               id="nextStep2"
               class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded disabled:bg-gray-400"
               disabled
             >
-              Próximo
+              Next
             </button>
           </div>
         </div>
 
         <div id="step3" class="step-content hidden">
-          <h2 class="text-xl font-semibold mb-4">
-            Etapa 3: Minificar Arquivos
-          </h2>
+          <h2 class="text-xl font-semibold mb-4">Step 3: Minify Files</h2>
 
           <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-            <h3 class="font-semibold text-blue-700 mb-3">
-              Minificação dos Arquivos
-            </h3>
+            <h3 class="font-semibold text-blue-700 mb-3">File Minification</h3>
             <p class="text-blue-700">
-              Nesta etapa, os arquivos serão copiados da pasta base para a pasta
-              intermediária com as simplificações aplicadas. Este processo
-              prepara os arquivos para a conversão.
+              In this step, files will be copied from the base folder to the intermediate
+              folder with simplifications applied. This process prepares the files for
+              conversion.
             </p>
           </div>
 
           <div class="bg-gray-100 rounded-lg p-6 mb-6">
-            <h3 class="font-semibold mb-3">Configurações de Minificação</h3>
+            <h3 class="font-semibold mb-3">Minification Settings</h3>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
               <div>
                 <p>
-                  <strong>Pasta Base:</strong>
+                  <strong>Base Folder:</strong>
                   <span id="minifySource" class="text-sm"></span>
                 </p>
                 <p>
-                  <strong>Pasta Intermediária:</strong>
+                  <strong>Intermediate Folder:</strong>
                   <span id="minifyTemp" class="text-sm"></span>
                 </p>
                 <p>
-                  <strong>Arquivos a Processar:</strong>
-                  <span id="fileCount" class="text-sm">Calculando...</span>
+                  <strong>Files to Process:</strong>
+                  <span id="fileCount" class="text-sm">Calculating...</span>
                 </p>
               </div>
 
               <div>
                 <p>
-                  <strong>Opções Ativas:</strong>
+                  <strong>Active Options:</strong>
                   <span id="minifyOptions" class="text-sm"></span>
                 </p>
                 <p>
-                  <strong>Total de Tokens:</strong>
+                  <strong>Total Tokens:</strong>
                   <span id="totalTokens" class="text-sm">-</span>
                 </p>
                 <p>
-                  <strong>Tamanho Total:</strong>
+                  <strong>Total Size:</strong>
                   <span id="totalSize" class="text-sm">-</span>
                 </p>
               </div>
             </div>
 
             <div class="mt-4 bg-white rounded-lg shadow p-4">
-              <h4 class="font-semibold mb-3">Métricas de Minificação</h4>
+              <h4 class="font-semibold mb-3">Minification Metrics</h4>
               <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div class="border border-gray-200 rounded p-3">
-                  <p class="text-sm text-gray-600">Redução de Tokens</p>
+                  <p class="text-sm text-gray-600">Token Reduction</p>
                   <p class="text-lg font-bold">
                     <span id="tokenReduction" class="text-green-600">-</span>
                   </p>
                 </div>
                 <div class="border border-gray-200 rounded p-3">
-                  <p class="text-sm text-gray-600">Redução de Tamanho</p>
+                  <p class="text-sm text-gray-600">Size Reduction</p>
                   <p class="text-lg font-bold">
                     <span id="sizeReduction" class="text-green-600">-</span>
                   </p>
                 </div>
                 <div class="border border-gray-200 rounded p-3">
-                  <p class="text-sm text-gray-600">Arquivos Processados</p>
+                  <p class="text-sm text-gray-600">Processed Files</p>
                   <p class="text-lg font-bold">
-                    <span id="processedFilesCount" class="text-blue-600"
-                      >-</span
-                    >
+                    <span id="processedFilesCount" class="text-blue-600">-</span>
                   </p>
                 </div>
               </div>
@@ -344,16 +319,16 @@
             </div>
             <div class="flex justify-between text-sm mt-2">
               <p id="minifyProgressText" class="text-left">
-                Aguardando início da minificação...
+                Waiting for minification to start...
               </p>
               <p id="minifyTimeEstimation" class="text-right text-blue-600 font-medium">
-                Calculando...
+                Calculating...
               </p>
             </div>
           </div>
 
           <div class="mb-6">
-            <h3 class="font-semibold mb-2">Log de Minificação</h3>
+            <h3 class="font-semibold mb-2">Minification Log</h3>
             <div
               id="minifyLog"
               class="h-40 overflow-y-auto border border-gray-300 rounded p-3 bg-gray-50 font-mono text-sm"
@@ -364,35 +339,25 @@
               <table class="min-w-full bg-white border border-gray-200">
                 <thead>
                   <tr>
-                    <th
-                      class="py-2 px-4 border-b border-gray-200 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                    >
-                      Arquivo
+                    <th class="py-2 px-4 border-b border-gray-200 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      File
                     </th>
-                    <th
-                      class="py-2 px-4 border-b border-gray-200 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                    >
-                      Tokens Original
+                    <th class="py-2 px-4 border-b border-gray-200 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Original Tokens
                     </th>
-                    <th
-                      class="py-2 px-4 border-b border-gray-200 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                    >
-                      Tokens Minificado
+                    <th class="py-2 px-4 border-b border-gray-200 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Minified Tokens
                     </th>
-                    <th
-                      class="py-2 px-4 border-b border-gray-200 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                    >
-                      Tamanho Original
+                    <th class="py-2 px-4 border-b border-gray-200 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Original Size
                     </th>
-                    <th
-                      class="py-2 px-4 border-b border-gray-200 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                    >
-                      Tamanho Minificado
+                    <th class="py-2 px-4 border-b border-gray-200 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Minified Size
                     </th>
                   </tr>
                 </thead>
                 <tbody id="minificationDetails">
-                  <!-- Os detalhes da minificação serão inseridos aqui -->
+                  <!-- Minification details will be inserted here -->
                 </tbody>
               </table>
             </div>
@@ -403,56 +368,57 @@
               id="prevStep3"
               class="border border-gray-300 bg-white hover:bg-gray-100 text-gray-800 px-6 py-2 rounded"
             >
-              Anterior
+              Previous
             </button>
             <button
               id="startMinification"
               class="bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded"
             >
-              Iniciar Minificação
+              Start Minification
             </button>
             <button
               id="nextStep3"
               class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded disabled:bg-gray-400"
               disabled
             >
-              Próximo
+              Next
             </button>
           </div>
         </div>
+
         <div id="step4" class="step-content hidden">
-          <h2 class="text-xl font-semibold mb-4">Etapa 4: Converter Código</h2>
+          <h2 class="text-xl font-semibold mb-4">Step 4: Convert Code</h2>
 
           <div class="bg-gray-100 rounded-lg p-6 mb-6">
-            <h3 class="font-semibold mb-3">Resumo da Configuração</h3>
+            <h3 class="font-semibold mb-3">Configuration Summary</h3>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
               <div>
                 <p>
-                  <strong>Pasta Base:</strong>
+                  <strong>Base Folder:</strong>
                   <span id="summarySource" class="text-sm"></span>
                 </p>
                 <p>
-                  <strong>Pasta Intermediária:</strong>
+                  <strong>Intermediate Folder:</strong>
                   <span id="summaryTemp" class="text-sm"></span>
                 </p>
                 <p>
-                  <strong>Pasta de Saída:</strong>
+                  <strong>Output Folder:</strong>
                   <span id="summaryOutput" class="text-sm"></span>
                 </p>
               </div>
 
               <div>
                 <p>
-                  <strong>Provedor de IA:</strong>
+                  <strong>AI Provider:</strong>
                   <span id="summaryProvider"></span>
                 </p>
                 <p>
-                  <strong>Linguagem Alvo:</strong>
+                  <strong>Target Language:</strong>
                   <span id="summaryLanguage"></span>
                 </p>
                 <p>
-                  <strong>Opções:</strong>
+                  <strong>Options:</strong>
                   <span id="summaryOptions" class="text-sm"></span>
                 </p>
               </div>
@@ -469,36 +435,39 @@
             </div>
             <div class="flex justify-between text-sm mt-2">
               <p id="progressText" class="text-left">
-                Aguardando início do processamento...
+                Waiting for processing to start...
               </p>
               <p id="timeEstimation" class="text-right text-blue-600 font-medium">
-                Calculando...
+                Calculating...
               </p>
             </div>
           </div>
+
           <div class="mb-6">
-            <h3 class="font-semibold mb-2">Log de Conversão</h3>
+            <h3 class="font-semibold mb-2">Conversion Log</h3>
             <div
               id="processLog"
               class="h-40 overflow-y-auto border border-gray-300 rounded p-3 bg-gray-50 font-mono text-sm"
             ></div>
-          </div>          <div class="mt-4 bg-white rounded-lg shadow p-4 mb-6">
-            <h4 class="font-semibold mb-3">Métricas de Processamento</h4>
+          </div>
+
+          <div class="mt-4 bg-white rounded-lg shadow p-4 mb-6">
+            <h4 class="font-semibold mb-3">Processing Metrics</h4>
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div class="border border-gray-200 rounded p-3">
-                <p class="text-sm text-gray-600">Tokens Enviados</p>
+                <p class="text-sm text-gray-600">Tokens Sent</p>
                 <p class="text-lg font-bold">
                   <span id="sentTokens" class="text-blue-600">-</span>
                 </p>
               </div>
               <div class="border border-gray-200 rounded p-3">
-                <p class="text-sm text-gray-600">Tokens Recebidos</p>
+                <p class="text-sm text-gray-600">Tokens Received</p>
                 <p class="text-lg font-bold">
                   <span id="receivedTokens" class="text-green-600">-</span>
                 </p>
               </div>
               <div class="border border-gray-200 rounded p-3">
-                <p class="text-sm text-gray-600">Arquivos Processados</p>
+                <p class="text-sm text-gray-600">Processed Files</p>
                 <p class="text-lg font-bold">
                   <span id="conversionProcessedFiles" class="text-blue-600">-</span>
                 </p>
@@ -507,20 +476,20 @@
           </div>
 
           <div class="mt-4 bg-white rounded-lg shadow p-4 mb-6">
-            <h4 class="font-semibold mb-3">Detalhes do Processamento</h4>
+            <h4 class="font-semibold mb-3">Processing Details</h4>
             <div class="overflow-x-auto">
               <table class="min-w-full border-collapse">
                 <thead>
                   <tr class="bg-gray-100">
-                    <th class="py-2 px-4 border-b border-gray-200 text-left">Arquivo</th>
-                    <th class="py-2 px-4 border-b border-gray-200 text-left">Tokens Enviados</th>
-                    <th class="py-2 px-4 border-b border-gray-200 text-left">Tokens Recebidos</th>
-                    <th class="py-2 px-4 border-b border-gray-200 text-left">Tamanho Original</th>
-                    <th class="py-2 px-4 border-b border-gray-200 text-left">Tamanho Processado</th>
+                    <th class="py-2 px-4 border-b border-gray-200 text-left">File</th>
+                    <th class="py-2 px-4 border-b border-gray-200 text-left">Tokens Sent</th>
+                    <th class="py-2 px-4 border-b border-gray-200 text-left">Tokens Received</th>
+                    <th class="py-2 px-4 border-b border-gray-200 text-left">Original Size</th>
+                    <th class="py-2 px-4 border-b border-gray-200 text-left">Processed Size</th>
                   </tr>
                 </thead>
                 <tbody id="processingDetails" class="text-sm">
-                  <!-- Detalhes dos arquivos serão adicionados aqui dinamicamente -->
+                  <!-- Processing details will be added here dynamically -->
                 </tbody>
               </table>
             </div>
@@ -531,25 +500,26 @@
               id="prevStep4"
               class="border border-gray-300 bg-white hover:bg-gray-100 text-gray-800 px-6 py-2 rounded"
             >
-              Anterior
+              Previous
             </button>
             <button
               id="startProcessing"
               class="bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded"
             >
-              Iniciar Conversão
+              Start Conversion
             </button>
             <button
               id="nextStep4"
               class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded disabled:bg-gray-400"
               disabled
             >
-              Próximo
+              Next
             </button>
           </div>
         </div>
+
         <div id="step5" class="step-content hidden">
-          <h2 class="text-xl font-semibold mb-4">Etapa 5: Resultados</h2>
+          <h2 class="text-xl font-semibold mb-4">Step 5: Results</h2>
 
           <div class="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
             <div class="flex items-center mb-2">
@@ -567,95 +537,80 @@
                   d="M5 13l4 4L19 7"
                 ></path>
               </svg>
-              <h3 class="font-semibold text-green-700">
-                Processamento Concluído
-              </h3>
+              <h3 class="font-semibold text-green-700">Processing Complete</h3>
             </div>
-            <p>O código foi processado com sucesso. Resumo do processamento:</p>
+            <p>The code has been processed successfully. Processing summary:</p>
           </div>
 
           <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
             <div class="border border-gray-200 rounded-lg p-4">
-              <h3 class="font-semibold mb-2">Arquivos Processados</h3>
+              <h3 class="font-semibold mb-2">Processed Files</h3>
               <p id="filesCount" class="text-2xl font-bold text-blue-600">0</p>
-              <p class="text-sm text-gray-600">
-                Arquivos processados com sucesso
-              </p>
+              <p class="text-sm text-gray-600">Files successfully processed</p>
             </div>
 
             <div class="border border-gray-200 rounded-lg p-4">
-              <h3 class="font-semibold mb-2">Tempo de Processamento</h3>
-              <p id="processingTime" class="text-2xl font-bold text-blue-600">
-                0s
-              </p>
-              <p class="text-sm text-gray-600">Tempo total de processamento</p>
+              <h3 class="font-semibold mb-2">Processing Time</h3>
+              <p id="processingTime" class="text-2xl font-bold text-blue-600">0s</p>
+              <p class="text-sm text-gray-600">Total processing time</p>
             </div>
 
             <div class="border border-gray-200 rounded-lg p-4">
-              <h3 class="font-semibold mb-2">Tamanho dos Arquivos</h3>
-              <p id="filesSize" class="text-2xl font-bold text-blue-600">
-                0 KB
-              </p>
-              <p class="text-sm text-gray-600">
-                Tamanho total dos arquivos processados
-              </p>
+              <h3 class="font-semibold mb-2">File Size</h3>
+              <p id="filesSize" class="text-2xl font-bold text-blue-600">0 KB</p>
+              <p class="text-sm text-gray-600">Total size of processed files</p>
             </div>
           </div>
 
           <div class="mb-6">
-            <h3 class="font-semibold mb-2">Detalhes dos Arquivos</h3>
+            <h3 class="font-semibold mb-2">File Details</h3>
             <div class="overflow-x-auto">
               <table class="min-w-full bg-white border border-gray-200">
                 <thead>
                   <tr>
-                    <th
-                      class="py-2 px-4 border-b border-gray-200 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                    >
-                      Arquivo Original
+                    <th class="py-2 px-4 border-b border-gray-200 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Original File
                     </th>
-                    <th
-                      class="py-2 px-4 border-b border-gray-200 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                    >
-                      Arquivo Simplificado
+                    <th class="py-2 px-4 border-b border-gray-200 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Simplified File
                     </th>
-                    <th
-                      class="py-2 px-4 border-b border-gray-200 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                    >
-                      Arquivo Convertido
+                    <th class="py-2 px-4 border-b border-gray-200 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Converted File
                     </th>
                   </tr>
                 </thead>
                 <tbody id="filesList">
-                  <!-- Os arquivos processados serão inseridos aqui -->
+                  <!-- Processed files will be inserted here -->
                 </tbody>
               </table>
             </div>
           </div>
+
           <div class="mt-8 flex justify-between">
             <button
               id="prevStep5"
               class="border border-gray-300 bg-white hover:bg-gray-100 text-gray-800 px-6 py-2 rounded"
             >
-              Anterior
+              Previous
             </button>
             <button
               id="openOutputFolder"
               class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded"
             >
-              Abrir Pasta de Saída
+              Open Output Folder
             </button>
             <button
               id="startNew"
               class="bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded"
             >
-              Novo Processamento
+              New Processing
             </button>
           </div>
 
           <div class="mt-6 mb-6">
             <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-              <h3 class="font-semibold text-blue-700 mb-2">Agente IA de Reorganização</h3>
-              <p>Use inteligência artificial para analisar e reorganizar os arquivos convertidos, melhorando a estrutura do projeto.</p>
+              <h3 class="font-semibold text-blue-700 mb-2">AI Reorganization Agent</h3>
+              <p>Use artificial intelligence to analyze and reorganize converted files, improving project structure.</p>
             </div>
             
             <div id="iaAgentPanel" class="border border-gray-200 rounded-lg p-4">
@@ -666,13 +621,13 @@
                 <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"></path>
                 </svg>
-                Analisar com IA
+                Analyze with AI
               </button>
               
               <div id="iaSuggestions" class="mt-4 hidden">
-                <h4 class="font-semibold mb-2">Sugestões do Agente IA:</h4>
+                <h4 class="font-semibold mb-2">AI Agent Suggestions:</h4>
                 <div id="suggestionsList" class="space-y-3">
-                  <!-- Sugestões serão inseridas aqui -->
+                  <!-- Suggestions will be inserted here -->
                 </div>
                 
                 <div class="mt-4 flex items-center justify-between">
@@ -680,36 +635,37 @@
                     id="btnApplySuggestions"
                     class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded"
                   >
-                    Aplicar Sugestões
+                    Apply Suggestions
                   </button>
                   <button
                     id="btnCancelSuggestions"
                     class="border border-gray-300 bg-white hover:bg-gray-100 text-gray-800 px-4 py-2 rounded"
                   >
-                    Cancelar
+                    Cancel
                   </button>
                 </div>
               </div>
               
               <div id="iaLoading" class="mt-4 text-center hidden">
                 <div class="inline-block animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-purple-500"></div>
-                <p class="mt-2 text-gray-600">Analisando código com IA...</p>
+                <p class="mt-2 text-gray-600">Analyzing code with AI...</p>
               </div>
               
               <div id="iaResults" class="mt-4 hidden">
                 <div class="p-3 bg-green-50 border border-green-200 rounded">
-                  <p class="text-green-700">Reorganização concluída com sucesso!</p>
+                  <p class="text-green-700">Reorganization completed successfully!</p>
                 </div>
                 <div id="iaResultsList" class="mt-3 max-h-60 overflow-y-auto">
-                  <!-- Resultados serão inseridos aqui -->
+                  <!-- Results will be inserted here -->
                 </div>
               </div>
             </div>
           </div>
         </div>
-      </div>    </div>
+      </div>
+    </div>
 
-    <!-- Carregar event-handlers.js antes de renderer.js -->
+    <!-- Load event-handlers.js before renderer.js -->
     <script src="../dist/event-handlers.js"></script>
     <script src="../dist/renderer.js"></script>
   </body>

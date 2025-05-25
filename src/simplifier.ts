@@ -9,20 +9,19 @@ export async function simplifyCode(
   code: string,
   fileExtension: string,
   options: SimplificationOptions
-): Promise<string> {
-  let result = code;
+): Promise<string> {  let result = code;
   
-  // Remover comentários
+  // Remove comments
   if (options.removeComments) {
     result = removeComments(result, fileExtension);
   }
   
-  // Reduzir palavras-chave
+  // Reduce keywords
   if (options.reduceKeywords) {
     result = reduceKeywords(result, fileExtension);
   }
   
-  // Minificar levemente
+  // Light minification
   if (options.minify) {
     result = minifyLightly(result, fileExtension);
   }
@@ -30,19 +29,17 @@ export async function simplifyCode(
   return result;
 }
 
-function removeComments(code: string, fileExtension: string): string {
-  // Implementação simplificada - na prática precisaria de um parser específico para cada linguagem
-  // Remove comentários de linha única
+function removeComments(code: string, fileExtension: string): string {  // Simplified implementation - in practice would need a specific parser for each language
+  // Remove single line comments
   let result = code.replace(/\/\/.*$/gm, '');
   
-  // Remove comentários de múltiplas linhas
+  // Remove multi-line comments
   result = result.replace(/\/\*[\s\S]*?\*\//g, '');
   
   return result;
 }
 
-function reduceKeywords(code: string, fileExtension: string): string {
-  // Implementação básica - na prática precisaria de análise sintática real
+function reduceKeywords(code: string, fileExtension: string): string {  // Basic implementation - in practice would need real syntactic analysis
   const keywordsMap: Record<string, string> = {
     'function': 'fn',
     'const ': 'c ',
@@ -60,7 +57,7 @@ function reduceKeywords(code: string, fileExtension: string): string {
 }
 
 function minifyLightly(code: string, fileExtension: string): string {
-  // Minificação leve: remover espaços em branco extras e quebras de linha
+  // Light minification: remove extra whitespace and line breaks
   return code
     .replace(/\s+/g, ' ')
     .replace(/\s*\n\s*/g, '\n')
