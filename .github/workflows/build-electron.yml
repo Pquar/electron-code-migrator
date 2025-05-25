@@ -1,0 +1,60 @@
+name: Build Electron App
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [20.x]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build TypeScript
+        run: npm run build
+
+      - name: Package Electron app (Windows)
+        run: |
+          npm install -g electron-packager
+          electron-packager . electron-code-migrator --platform=win32 --arch=x64 --out=release-build --overwrite
+
+      - name: Package Electron app (Linux)
+        run: |
+          electron-packager . electron-code-migrator --platform=linux --arch=x64 --out=release-build --overwrite
+
+      - name: Package Electron app (macOS)
+        run: |
+          electron-packager . electron-code-migrator --platform=darwin --arch=x64 --out=release-build --overwrite
+
+      - name: Upload Windows build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: electron-code-migrator-win-x64
+          path: release-build/electron-code-migrator-win32-x64/
+
+      - name: Upload Linux build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: electron-code-migrator-linux-x64
+          path: release-build/electron-code-migrator-linux-x64/
+
+      - name: Upload macOS build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: electron-code-migrator-macos-x64
+          path: release-build/electron-code-migrator-darwin-x64/
