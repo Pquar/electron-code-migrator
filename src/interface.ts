@@ -18,3 +18,33 @@ export interface SimplificationOptions {
   reduceKeywords: boolean;
   minify: boolean;
 }
+
+export interface TokenMetrics {
+  sent: number;
+  received: number;
+}
+
+export interface ProcessingMetrics {
+  startTime: number;
+  estimatedEndTime?: number;
+  progress: number;
+  tokensProcessed: number;
+  totalTokens: number;
+}
+
+export interface ConversionMetrics {
+  tokens: TokenMetrics;
+  fileSize: {
+    before: string;
+    after: string;
+  };
+  processingTime: number;
+}
+
+export interface ConversionResult {
+  code: string;
+  metrics?: {
+    tokens: TokenMetrics;
+    processingTime: number;
+  };
+}

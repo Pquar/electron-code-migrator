@@ -18,9 +18,20 @@ interface ElectronAPI {
   onMigrationProgress: (callback: (message: string) => void) => void;
 }
 
+interface LogData {
+  type: 'minification' | 'conversion';
+  message: string;
+}
+
+interface Logger {
+  onLogUpdate: (callback: (data: LogData) => void) => void;
+}
+
 interface Window {
   api: API;
   electronAPI: ElectronAPI;
+  logger: Logger;
+  agent: AgentAPI;
 }
 
 declare global {
@@ -45,5 +56,43 @@ declare global {
       logMessage: (message: string) => void;
       onMigrationProgress: (callback: (message: string) => void) => void;
     };
+    logger: Logger;
+    agent: AgentAPI;
+    iaAgent: IAAgentAPI;
   }
+}
+
+interface AgentAPI {
+  createFolder: (folderPath: string) => Promise<any>;
+  move: (src: string, dest: string) => Promise<any>;
+  rename: (oldPath: string, newPath: string) => Promise<any>;
+  delete: (targetPath: string) => Promise<any>;
+  writeFile: (targetPath: string, content: string) => Promise<any>;
+  readFile: (targetPath: string) => Promise<any>;
+}
+
+interface IAAgentSuggestion {
+  type: 'move' | 'rename' | 'create' | 'delete' | 'modify';
+  description: string;
+  path?: string;
+  destination?: string;
+  newName?: string;
+  content?: string;
+}
+
+interface IAAgentAPI {
+  analyzeCode: (options: any, files: any[]) => Promise<{
+    success: boolean;
+    suggestions?: IAAgentSuggestion[];
+    error?: string;
+  }>;
+  executeSuggestions: (suggestions: IAAgentSuggestion[], outputFolder: string) => Promise<{
+    success: boolean;
+    results?: Array<{
+      suggestion: IAAgentSuggestion;
+      success: boolean;
+      error?: string;
+    }>;
+    error?: string;
+  }>;
 }

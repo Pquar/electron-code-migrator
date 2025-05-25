@@ -1,5 +1,6 @@
 import * as fs from "fs-extra";
 import * as path from "path";
+import { promisify } from "util";
 import { simplifyCode } from "./simplifier";
 import { convertCode } from "./converter";
 import { LLama } from "llama-node";
@@ -167,7 +168,7 @@ export async function llamaApiConvert(
   apiUrl: string,
   apiKey: string
 ): Promise<string> {
-  logMessage("Iniciando chamada à API Llama...");
+  console.log("Iniciando chamada à API Llama...");
 
   try {
     const response = await axios.post(
@@ -296,9 +297,12 @@ export async function minifyFiles(options: ProcessOptions): Promise<{
 
   // Verificar e criar a pasta temporária se não existir
   await fs.ensureDir(tempFolder);
-
   // Obter lista de arquivos na pasta de origem
   const sourceFiles = await getAllFiles(sourceFolder);
+  
+  // Enviar contagem total de arquivos para acompanhamento de progresso
+  process.send?.({ type: 'minification-file-count', count: sourceFiles.length });
+  
   const minifiedFiles: Array<{
     original: string;
     minified: string;
@@ -342,9 +346,7 @@ export async function minifyFiles(options: ProcessOptions): Promise<{
       totalMinifiedTokens += minifiedTokenCount;
 
       // Escrever o conteúdo simplificado no arquivo temporário
-      await fs.writeFile(tempFilePath, minifiedContent);
-
-      // Adicionar à lista de arquivos processados com métricas
+      await fs.writeFile(tempFilePath, minifiedContent);      // Adicionar à lista de arquivos processados com métricas
       minifiedFiles.push({
         original: filePath,
         minified: tempFilePath,
@@ -352,15 +354,23 @@ export async function minifyFiles(options: ProcessOptions): Promise<{
         minifiedTokens: minifiedTokenCount,
         originalSize: formatFileSize(originalSize),
         minifiedSize: formatFileSize(minifiedSize),
-      });
-
-      console.log(`Arquivo minificado: ${relativePath}`);
-      console.log(`Tokens: ${originalTokenCount} -> ${minifiedTokenCount}`);
-      console.log(
-        `Tamanho: ${formatFileSize(originalSize)} -> ${formatFileSize(
-          minifiedSize
-        )}`
-      );
+      });      // Emitir progresso para a interface
+      const progress = {
+        file: relativePath,
+        tokens: {
+          before: originalTokenCount,
+          after: minifiedTokenCount
+        },
+        size: {
+          before: formatFileSize(originalSize),
+          after: formatFileSize(minifiedSize),
+          beforeBytes: originalSize,
+          afterBytes: minifiedSize
+        },
+        fileInfo: `${path.extname(filePath)} | ${path.basename(filePath)} | Redução: ${Math.round((1 - minifiedSize / originalSize) * 100)}%`
+      };
+      
+      process.send?.({ type: 'minification-progress', data: progress });
     } catch (error) {
       console.error(`Erro ao minificar arquivo ${filePath}:`, error);
     }
@@ -397,9 +407,12 @@ export async function processFiles(options: ProcessOptions): Promise<{
   // Etapa 1: Verificar pastas e criar se não existirem
   await fs.ensureDir(tempFolder);
   await fs.ensureDir(outputFolder);
-
   // Etapa 2: Copiar arquivos da pasta base para a pasta temporária com simplificações
   const sourceFiles = await getAllFiles(sourceFolder);
+  
+  // Enviar contagem total de arquivos para acompanhamento de progresso
+  process.send?.({ type: 'file-count', count: sourceFiles.length });
+  
   const processedFiles = [];
 
   for (const filePath of sourceFiles) {
@@ -414,11 +427,16 @@ export async function processFiles(options: ProcessOptions): Promise<{
         content,
         path.extname(filePath),
         simplificationOptions
-      );
-
-      await fs.writeFile(tempFilePath, content);
-      processedFiles.push({ original: filePath, simplified: tempFilePath });
-      console.log(`Arquivo simplificado: ${relativePath}`);
+      );      await fs.writeFile(tempFilePath, content);
+      processedFiles.push({ original: filePath, simplified: tempFilePath });      // Emitir progresso para a interface
+      process.send?.({ 
+        type: 'conversion-progress', 
+        data: { 
+          status: 'simplified',
+          file: relativePath,
+          fileInfo: `${formatFileSize(Buffer.byteLength(content, "utf-8"))} | ${estimateTokenCount(content)} tokens`
+        }
+      });
     } catch (error) {
       console.error(`Erro ao processar arquivo ${filePath}:`, error);
     }
@@ -435,25 +453,48 @@ export async function processFiles(options: ProcessOptions): Promise<{
         getConvertedFilename(relativePath, conversionOptions.targetLanguage)
       );
 
-      await fs.ensureDir(path.dirname(outputFilePath));
-
-      const content = await fs.readFile(file.simplified, "utf-8");
-      const convertedContent = await convertCode(
+      await fs.ensureDir(path.dirname(outputFilePath));      const content = await fs.readFile(file.simplified, "utf-8");
+      const conversionResult = await convertCode(
         content,
         path.extname(file.simplified),
         conversionOptions
       );
+      
+      // Extrair o código convertido do resultado
+      const convertedContent = conversionResult.code;
 
       await fs.writeFile(outputFilePath, convertedContent);
       convertedFiles.push({
         simplified: file.simplified,
         converted: outputFilePath,
+        metrics: conversionResult.metrics
       });
-      console.log(
-        `Arquivo convertido: ${relativePath} -> ${path.basename(
-          outputFilePath
-        )}`
-      );
+      
+      // Obter métricas de tokens da conversão
+      const tokensInfo = conversionResult.metrics?.tokens || {
+        sent: estimateTokenCount(content),
+        received: estimateTokenCount(convertedContent)
+      };
+        const originalSizeBytes = Buffer.byteLength(content, "utf-8");
+      const convertedSizeBytes = Buffer.byteLength(convertedContent, "utf-8");
+      const fileSize = formatFileSize(convertedSizeBytes);
+      const processingTime = conversionResult.metrics?.processingTime || 0;
+      
+      // Emitir progresso para a interface
+      process.send?.({
+        type: 'conversion-progress',
+        data: {
+          status: 'converted',
+          file: relativePath,
+          output: path.basename(outputFilePath),
+          fileInfo: `${fileSize} | ${tokensInfo.received} tokens | Tempo: ${processingTime}ms`,
+          tokensInfo: tokensInfo,
+          fileSize: {
+            original: originalSizeBytes,
+            processed: convertedSizeBytes
+          }
+        }
+      });
     } catch (error) {
       console.error(`Erro ao converter arquivo ${file.simplified}:`, error);
     }
@@ -530,7 +571,7 @@ function getConvertedFilename(
 }
 
 // Função auxiliar para estimar o número de tokens em um texto
-function estimateTokenCount(text: string): number {
+export function estimateTokenCount(text: string): number {
   // Remove comentários de múltiplas linhas
   text = text.replace(/\/\*[\s\S]*?\*\//g, "");
   // Remove comentários de linha única
@@ -566,4 +607,215 @@ function formatFileSize(bytes: number): string {
   }
 
   return `${size.toFixed(2)} ${units[unitIndex]}`;
+}
+
+// Funções utilitárias para manipulação de arquivos e pastas por instrução do agente
+export async function createFolder(folderPath: string): Promise<void> {
+  await fs.ensureDir(folderPath);
+}
+
+export async function moveFileOrFolder(src: string, dest: string): Promise<void> {
+  await fs.move(src, dest, { overwrite: true });
+}
+
+export async function renameFileOrFolder(oldPath: string, newPath: string): Promise<void> {
+  await fs.move(oldPath, newPath, { overwrite: true });
+}
+
+export async function deleteFileOrFolder(targetPath: string): Promise<void> {
+  await fs.remove(targetPath);
+}
+
+export async function writeFile(targetPath: string, content: string): Promise<void> {
+  await fs.ensureDir(path.dirname(targetPath));
+  await fs.writeFile(targetPath, content, 'utf-8');
+}
+
+export async function readFile(targetPath: string): Promise<string> {
+  return await fs.readFile(targetPath, 'utf-8');
+}
+
+// Interface para sugestões do agente de IA
+export interface AgentSuggestion {
+  type: 'move' | 'rename' | 'create' | 'delete' | 'modify';
+  description: string;
+  path?: string;
+  destination?: string;
+  newName?: string;
+  content?: string;
+}
+
+/**
+ * Agente IA que analisa o código e sugere reorganizações
+ * @param options Opções de processo
+ * @param files Lista de arquivos convertidos
+ * @returns Sugestões de reorganização
+ */
+export async function analyzeCodeWithAgent(
+  options: ProcessOptions,
+  files: Array<{ simplified: string; converted: string }>
+): Promise<AgentSuggestion[]> {
+  const { conversionOptions, outputFolder } = options;
+  const suggestions: AgentSuggestion[] = [];
+
+  // Preparar um resumo dos arquivos para enviar à IA
+  const filesSummary = await Promise.all(files.map(async (file) => {
+    const relativePath = path.relative(outputFolder, file.converted);
+    const content = await fs.readFile(file.converted, 'utf-8');
+    // Obter apenas as primeiras linhas para economizar tokens
+    const preview = content.split('\n').slice(0, 10).join('\n');
+    return { path: relativePath, preview };
+  }));
+
+  // Construir o prompt para a IA
+  const prompt = `
+Você é um assistente especializado em organizar código. Analise os arquivos convertidos para ${conversionOptions.targetLanguage} e sugira reorganizações que tornem o projeto mais limpo e bem estruturado.
+
+Sugestões podem incluir:
+1. Mover arquivos para pastas mais apropriadas
+2. Renomear arquivos para nomes mais descritivos
+3. Criar novas pastas para agrupar arquivos relacionados
+4. Deletar arquivos temporários ou desnecessários
+5. Modificar conteúdo de arquivos para corrigir problemas de compatibilidade
+
+Lista de arquivos convertidos:
+${JSON.stringify(filesSummary, null, 2)}
+
+Forneça suas sugestões em formato JSON com esta estrutura:
+[
+  {
+    "type": "move",
+    "description": "Mover arquivo X para pasta Y para melhor organização",
+    "path": "caminho/para/arquivo",
+    "destination": "novo/caminho"
+  },
+  {
+    "type": "rename",
+    "description": "Renomear arquivo para nome mais descritivo",
+    "path": "caminho/para/arquivo",
+    "newName": "novo-nome.ext"
+  },
+  {
+    "type": "create",
+    "description": "Criar nova pasta para agrupar arquivos relacionados",
+    "path": "nova/pasta"
+  },
+  {
+    "type": "delete",
+    "description": "Deletar arquivo temporário",
+    "path": "caminho/para/arquivo/temp"
+  },
+  {
+    "type": "modify",
+    "description": "Corrigir problema de compatibilidade",
+    "path": "caminho/para/arquivo",
+    "content": "novo conteúdo"
+  }
+]
+
+Limite-se a no máximo 5 sugestões, priorizando as mais importantes.
+`;
+
+  try {
+    // Escolher a API de IA com base nas opções configuradas
+    let aiResponse: string;
+    
+    if (conversionOptions.provider === "openai" || conversionOptions.provider === "gemini" || conversionOptions.provider === "anthropic") {
+      // Usar APIs externas para análise mais sofisticada
+      aiResponse = await llamaApiConvert(prompt, conversionOptions.apiUrl || "", conversionOptions.apiKey || "");
+    } else {
+      // Usar o Llama local como fallback
+      aiResponse = await llamaApiConvert(prompt, "http://127.0.0.1:11434/api/generate", "test");
+    }
+      // Extrair JSON da resposta
+    const jsonMatch = aiResponse.match(/\[\s*\{[\s\S]*\}\s*\]/);
+    if (jsonMatch) {
+      try {
+        const parsedSuggestions = JSON.parse(jsonMatch[0]) as AgentSuggestion[];
+        return parsedSuggestions.filter(s => 
+          s.type && 
+          s.description && 
+          (s.path || s.type === 'create')
+        );
+      } catch (parseError) {
+        console.error("Erro ao analisar sugestões JSON:", parseError);
+        return [];
+      }
+    }
+    
+    return [];
+  } catch (error) {
+    console.error("Erro ao analisar código com agente IA:", error);
+    return [];
+  }
+}
+
+/**
+ * Executa as sugestões do agente IA para reorganizar arquivos
+ * @param suggestions Lista de sugestões
+ * @param outputFolder Pasta de saída
+ * @returns Relatório de ações executadas
+ */
+export async function executeAgentSuggestions(
+  suggestions: AgentSuggestion[],
+  outputFolder: string
+): Promise<Array<{ suggestion: AgentSuggestion; success: boolean; error?: string }>> {
+  const results = [];
+  
+  for (const suggestion of suggestions) {
+    try {
+      switch (suggestion.type) {
+        case 'move':
+          if (suggestion.path && suggestion.destination) {
+            const src = path.join(outputFolder, suggestion.path);
+            const dest = path.join(outputFolder, suggestion.destination);
+            await fs.ensureDir(path.dirname(dest));
+            await moveFileOrFolder(src, dest);
+            results.push({ suggestion, success: true });
+          }
+          break;
+          
+        case 'rename':
+          if (suggestion.path && suggestion.newName) {
+            const oldPath = path.join(outputFolder, suggestion.path);
+            const newPath = path.join(path.dirname(oldPath), suggestion.newName);
+            await renameFileOrFolder(oldPath, newPath);
+            results.push({ suggestion, success: true });
+          }
+          break;
+          
+        case 'create':
+          if (suggestion.path) {
+            const dirPath = path.join(outputFolder, suggestion.path);
+            await createFolder(dirPath);
+            results.push({ suggestion, success: true });
+          }
+          break;
+          
+        case 'delete':
+          if (suggestion.path) {
+            const targetPath = path.join(outputFolder, suggestion.path);
+            await deleteFileOrFolder(targetPath);
+            results.push({ suggestion, success: true });
+          }
+          break;
+          
+        case 'modify':
+          if (suggestion.path && suggestion.content) {
+            const filePath = path.join(outputFolder, suggestion.path);
+            await writeFile(filePath, suggestion.content);
+            results.push({ suggestion, success: true });
+          }
+          break;
+      }
+    } catch (error: any) {
+      results.push({ 
+        suggestion, 
+        success: false, 
+        error: error.message 
+      });
+    }
+  }
+  
+  return results;
 }

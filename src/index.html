@@ -342,9 +342,14 @@
                 style="width: 0%"
               ></div>
             </div>
-            <p id="minifyProgressText" class="text-center mt-2">
-              Aguardando início da minificação...
-            </p>
+            <div class="flex justify-between text-sm mt-2">
+              <p id="minifyProgressText" class="text-left">
+                Aguardando início da minificação...
+              </p>
+              <p id="minifyTimeEstimation" class="text-right text-blue-600 font-medium">
+                Calculando...
+              </p>
+            </div>
           </div>
 
           <div class="mb-6">
@@ -462,9 +467,14 @@
                 style="width: 0%"
               ></div>
             </div>
-            <p id="progressText" class="text-center mt-2">
-              Aguardando início do processamento...
-            </p>
+            <div class="flex justify-between text-sm mt-2">
+              <p id="progressText" class="text-left">
+                Aguardando início do processamento...
+              </p>
+              <p id="timeEstimation" class="text-right text-blue-600 font-medium">
+                Calculando...
+              </p>
+            </div>
           </div>
           <div class="mb-6">
             <h3 class="font-semibold mb-2">Log de Conversão</h3>
@@ -472,6 +482,48 @@
               id="processLog"
               class="h-40 overflow-y-auto border border-gray-300 rounded p-3 bg-gray-50 font-mono text-sm"
             ></div>
+          </div>          <div class="mt-4 bg-white rounded-lg shadow p-4 mb-6">
+            <h4 class="font-semibold mb-3">Métricas de Processamento</h4>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div class="border border-gray-200 rounded p-3">
+                <p class="text-sm text-gray-600">Tokens Enviados</p>
+                <p class="text-lg font-bold">
+                  <span id="sentTokens" class="text-blue-600">-</span>
+                </p>
+              </div>
+              <div class="border border-gray-200 rounded p-3">
+                <p class="text-sm text-gray-600">Tokens Recebidos</p>
+                <p class="text-lg font-bold">
+                  <span id="receivedTokens" class="text-green-600">-</span>
+                </p>
+              </div>
+              <div class="border border-gray-200 rounded p-3">
+                <p class="text-sm text-gray-600">Arquivos Processados</p>
+                <p class="text-lg font-bold">
+                  <span id="conversionProcessedFiles" class="text-blue-600">-</span>
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-4 bg-white rounded-lg shadow p-4 mb-6">
+            <h4 class="font-semibold mb-3">Detalhes do Processamento</h4>
+            <div class="overflow-x-auto">
+              <table class="min-w-full border-collapse">
+                <thead>
+                  <tr class="bg-gray-100">
+                    <th class="py-2 px-4 border-b border-gray-200 text-left">Arquivo</th>
+                    <th class="py-2 px-4 border-b border-gray-200 text-left">Tokens Enviados</th>
+                    <th class="py-2 px-4 border-b border-gray-200 text-left">Tokens Recebidos</th>
+                    <th class="py-2 px-4 border-b border-gray-200 text-left">Tamanho Original</th>
+                    <th class="py-2 px-4 border-b border-gray-200 text-left">Tamanho Processado</th>
+                  </tr>
+                </thead>
+                <tbody id="processingDetails" class="text-sm">
+                  <!-- Detalhes dos arquivos serão adicionados aqui dinamicamente -->
+                </tbody>
+              </table>
+            </div>
           </div>
 
           <div class="mt-8 flex justify-between">
@@ -599,10 +651,66 @@
               Novo Processamento
             </button>
           </div>
-        </div>
-      </div>
-    </div>
 
-    <script src="../dist/renderer_corrected.js"></script>
+          <div class="mt-6 mb-6">
+            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+              <h3 class="font-semibold text-blue-700 mb-2">Agente IA de Reorganização</h3>
+              <p>Use inteligência artificial para analisar e reorganizar os arquivos convertidos, melhorando a estrutura do projeto.</p>
+            </div>
+            
+            <div id="iaAgentPanel" class="border border-gray-200 rounded-lg p-4">
+              <button
+                id="btnAnalyzeWithIA"
+                class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded flex items-center"
+              >
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"></path>
+                </svg>
+                Analisar com IA
+              </button>
+              
+              <div id="iaSuggestions" class="mt-4 hidden">
+                <h4 class="font-semibold mb-2">Sugestões do Agente IA:</h4>
+                <div id="suggestionsList" class="space-y-3">
+                  <!-- Sugestões serão inseridas aqui -->
+                </div>
+                
+                <div class="mt-4 flex items-center justify-between">
+                  <button
+                    id="btnApplySuggestions"
+                    class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded"
+                  >
+                    Aplicar Sugestões
+                  </button>
+                  <button
+                    id="btnCancelSuggestions"
+                    class="border border-gray-300 bg-white hover:bg-gray-100 text-gray-800 px-4 py-2 rounded"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              </div>
+              
+              <div id="iaLoading" class="mt-4 text-center hidden">
+                <div class="inline-block animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-purple-500"></div>
+                <p class="mt-2 text-gray-600">Analisando código com IA...</p>
+              </div>
+              
+              <div id="iaResults" class="mt-4 hidden">
+                <div class="p-3 bg-green-50 border border-green-200 rounded">
+                  <p class="text-green-700">Reorganização concluída com sucesso!</p>
+                </div>
+                <div id="iaResultsList" class="mt-3 max-h-60 overflow-y-auto">
+                  <!-- Resultados serão inseridos aqui -->
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>    </div>
+
+    <!-- Carregar event-handlers.js antes de renderer.js -->
+    <script src="../dist/event-handlers.js"></script>
+    <script src="../dist/renderer.js"></script>
   </body>
 </html>

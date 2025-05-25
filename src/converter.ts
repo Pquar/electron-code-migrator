@@ -1,8 +1,8 @@
 import axios from "axios";
 import { OpenAI } from "openai";
 import Anthropic from "@anthropic-ai/sdk";
-import { ConversionOptions } from "./interface";
-import { llamaLocalConvert, llamaApiConvert } from "./processor";
+import { ConversionOptions, ConversionResult, TokenMetrics } from "./interface";
+import { llamaLocalConvert, llamaApiConvert, estimateTokenCount } from "./processor";
 import fs from 'fs';
 import path from 'path';
 
@@ -11,37 +11,59 @@ import path from 'path';
  * @param code Código fonte a ser convertido
  * @param fileExtension Extensão do arquivo de origem
  * @param options Opções de conversão
- * @returns Código convertido
+ * @returns Objeto com código convertido e métricas
  */
 export async function convertCode(
   code: string,
   fileExtension: string,
   options: ConversionOptions
-): Promise<string> {
+): Promise<ConversionResult> {
   // Determina a linguagem de origem baseada na extensão do arquivo
   const sourceLanguage = getLanguageFromExtension(fileExtension);
   
   // Registra a tentativa de conversão
   console.log(`Convertendo de ${sourceLanguage} para ${options.targetLanguage} usando ${options.provider}`);
   
+  // Iniciar contador de tempo
+  const startTime = Date.now();
+  
   try {
+    let result: ConversionResult;
+    
     switch (options.provider) {
       case "openai":
-        return await convertWithOpenAI(code, sourceLanguage, options);
+        result = await convertWithOpenAI(code, sourceLanguage, options);
+        break;
       case "gemini":
-        return await convertWithGemini(code, sourceLanguage, options);
+        result = await convertWithGemini(code, sourceLanguage, options);
+        break;
       case "anthropic":
-        return await convertWithAnthropic(code, sourceLanguage, options);
+        result = await convertWithAnthropic(code, sourceLanguage, options);
+        break;
       case "llama-local":
       case "llama":
-        return await convertWithLLama(code, sourceLanguage, options);
+        result = await convertWithLLama(code, sourceLanguage, options);
+        break;
       default:
         throw new Error(`Provedor de IA não suportado: ${options.provider}`);
     }
+    
+    // Calcular tempo total de processamento se ainda não foi calculado
+    if (result.metrics && !result.metrics.processingTime) {
+      result.metrics.processingTime = Date.now() - startTime;
+    }
+    
+    return result;
   } catch (error: any) {
     console.error(`Erro na conversão usando ${options.provider}:`, error);
     // Retornar o código original em caso de falha, com um comentário explicativo
-    return `// ERRO DE CONVERSÃO: ${error.message}\n\n${code}`;
+    return {
+      code: `// ERRO DE CONVERSÃO: ${error.message}\n\n${code}`,
+      metrics: {
+        tokens: { sent: estimateTokenCount(code), received: 0 },
+        processingTime: Date.now() - startTime
+      }
+    };
   }
 }
 
@@ -52,7 +74,7 @@ async function convertWithOpenAI(
   code: string,
   sourceLanguage: string,
   options: ConversionOptions
-): Promise<string> {
+): Promise<ConversionResult> {
   if (!options.apiKey) {
     throw new Error("API Key da OpenAI não fornecida");
   }
@@ -62,6 +84,8 @@ async function convertWithOpenAI(
   });
 
   const prompt = createConversionPrompt(code, sourceLanguage, options.targetLanguage);
+  const promptTokens = estimateTokenCount(prompt);
+  const startTime = Date.now();
 
   try {
     const response = await client.chat.completions.create({
@@ -72,7 +96,22 @@ async function convertWithOpenAI(
     });
 
     const convertedCode = response.choices[0]?.message?.content || code;
-    return sanitizeCode(convertedCode);
+    const sanitizedCode = sanitizeCode(convertedCode);
+    const outputTokens = estimateTokenCount(sanitizedCode);
+    
+    // Usar valores reais da API se disponíveis, caso contrário usar nossa estimativa
+    const tokenMetrics: TokenMetrics = {
+      sent: response.usage?.prompt_tokens || promptTokens,
+      received: response.usage?.completion_tokens || outputTokens
+    };
+    
+    return {
+      code: sanitizedCode,
+      metrics: {
+        tokens: tokenMetrics,
+        processingTime: Date.now() - startTime
+      }
+    };
   } catch (error: any) {
     console.error("Erro ao chamar a API OpenAI:", error);
     throw new Error(`Falha ao converter o código usando OpenAI: ${error.message}`);
@@ -86,13 +125,15 @@ async function convertWithGemini(
   code: string,
   sourceLanguage: string,
   options: ConversionOptions
-): Promise<string> {
+): Promise<ConversionResult> {
   if (!options.apiKey) {
     throw new Error("API Key do Gemini não fornecida");
   }
 
   const apiUrl = "https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent";
   const prompt = createConversionPrompt(code, sourceLanguage, options.targetLanguage);
+  const promptTokens = estimateTokenCount(prompt);
+  const startTime = Date.now();
 
   try {
     const response = await axios.post(
@@ -116,7 +157,22 @@ async function convertWithGemini(
     );
 
     const convertedCode = response.data.candidates[0]?.content?.parts[0]?.text || code;
-    return sanitizeCode(convertedCode);
+    const sanitizedCode = sanitizeCode(convertedCode);
+    const outputTokens = estimateTokenCount(sanitizedCode);
+    
+    // Gemini não retorna contagens de tokens de forma direta, então usamos nossa estimativa
+    const tokenMetrics: TokenMetrics = {
+      sent: promptTokens,
+      received: outputTokens
+    };
+    
+    return {
+      code: sanitizedCode,
+      metrics: {
+        tokens: tokenMetrics,
+        processingTime: Date.now() - startTime
+      }
+    };
   } catch (error: any) {
     console.error("Erro ao chamar a API Gemini:", error);
     throw new Error(`Falha ao converter o código usando Gemini: ${error.message}`);
@@ -130,7 +186,7 @@ async function convertWithAnthropic(
   code: string,
   sourceLanguage: string,
   options: ConversionOptions
-): Promise<string> {
+): Promise<ConversionResult> {
   if (!options.apiKey) {
     throw new Error("API Key da Anthropic não fornecida");
   }
@@ -140,6 +196,8 @@ async function convertWithAnthropic(
   });
 
   const prompt = createConversionPrompt(code, sourceLanguage, options.targetLanguage);
+  const promptTokens = estimateTokenCount(prompt);
+  const startTime = Date.now();
 
   try {
     const response = await anthropic.messages.create({
@@ -155,12 +213,32 @@ async function convertWithAnthropic(
     });
 
     // Concatenar todos os blocos de texto da resposta
-    const convertedCode = response.content
+    const convertedCodeBlocks = response.content
       .filter((block) => block.type === "text" && typeof block.text === "string")
-      .map((block) => block.type)
+      .map((block) => {
+        if (block.type === "text" && typeof block.text === "string") {
+          return block.text;
+        }
+        return "";
+      })
       .join("\n");
 
-    return sanitizeCode(convertedCode);
+    const sanitizedCode = sanitizeCode(convertedCodeBlocks);
+    const outputTokens = estimateTokenCount(sanitizedCode);
+    
+    // Anthropic retorna estimativas de token
+    const tokenMetrics: TokenMetrics = {
+      sent: response.usage?.input_tokens || promptTokens,
+      received: response.usage?.output_tokens || outputTokens
+    };
+    
+    return {
+      code: sanitizedCode,
+      metrics: {
+        tokens: tokenMetrics,
+        processingTime: Date.now() - startTime
+      }
+    };
   } catch (error: any) {
     console.error("Erro ao chamar a API Anthropic:", error);
     throw new Error(`Falha ao converter o código usando Anthropic: ${error.message}`);
@@ -174,9 +252,13 @@ async function convertWithLLama(
   code: string,
   sourceLanguage: string,
   options: ConversionOptions
-): Promise<string> {
+): Promise<ConversionResult> {
+  const prompt = createConversionPrompt(code, sourceLanguage, options.targetLanguage);
+  const promptTokens = estimateTokenCount(prompt);
+  const startTime = Date.now();
+  
   try {
-    const prompt = createConversionPrompt(code, sourceLanguage, options.targetLanguage);
+    let convertedCode: string;
     
     if (options.provider === "llama") {
       // Valida configurações da API
@@ -188,13 +270,28 @@ async function convertWithLLama(
       }
 
       // Chama a versão da API HTTP
-      const convertedCode = await llamaApiConvert(prompt, options.apiUrl, options.apiKey);
-      return sanitizeCode(convertedCode);
+      convertedCode = await llamaApiConvert(prompt, options.apiUrl, options.apiKey);
     } else {
       // Chama a versão local
-      const convertedCode = await llamaLocalConvert(prompt);
-      return sanitizeCode(convertedCode);
+      convertedCode = await llamaLocalConvert(prompt);
     }
+    
+    const sanitizedCode = sanitizeCode(convertedCode);
+    const outputTokens = estimateTokenCount(sanitizedCode);
+    
+    // Llama não retorna contagens de tokens, então usamos nossa estimativa
+    const tokenMetrics: TokenMetrics = {
+      sent: promptTokens,
+      received: outputTokens
+    };
+    
+    return {
+      code: sanitizedCode,
+      metrics: {
+        tokens: tokenMetrics,
+        processingTime: Date.now() - startTime
+      }
+    };
   } catch (error: any) {
     console.error(`Erro ao converter com ${options.provider === "llama" ? "API" : "local"} Llama:`, error);
     throw new Error(`Falha ao converter o código usando ${options.provider === "llama" ? "API" : "local"} Llama: ${error.message}`);
