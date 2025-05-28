@@ -72,12 +72,13 @@ interface AgentAPI {
 }
 
 interface IAAgentSuggestion {
-  type: 'move' | 'rename' | 'create' | 'delete' | 'modify';
+  type: 'move' | 'rename' | 'create' | 'delete' | 'modify' | 'mcp_create' | 'mcp_modify' | 'mcp_delete';
   description: string;
   path?: string;
   destination?: string;
   newName?: string;
   content?: string;
+  mcpFolder?: string;
 }
 
 interface IAAgentAPI {

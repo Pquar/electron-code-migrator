@@ -2,9 +2,13 @@ import axios from "axios";
 import { OpenAI } from "openai";
 import Anthropic from "@anthropic-ai/sdk";
 import { ConversionOptions, ConversionResult, TokenMetrics } from "./interface";
-import { llamaLocalConvert, llamaApiConvert, estimateTokenCount } from "./processor";
-import fs from 'fs';
-import path from 'path';
+import {
+  llamaLocalConvert,
+  llamaApiConvert,
+  estimateTokenCount,
+} from "./processor";
+import fs from "fs";
+import path from "path";
 
 /**
  * Converts code from one language to another using the specified AI provider
@@ -20,15 +24,17 @@ export async function convertCode(
 ): Promise<ConversionResult> {
   // Determine source language based on file extension
   const sourceLanguage = getLanguageFromExtension(fileExtension);
-  
+
   // Log conversion attempt
-  console.log(`Converting from ${sourceLanguage} to ${options.targetLanguage} using ${options.provider}`);
-  
+  console.log(
+    `Converting from ${sourceLanguage} to ${options.targetLanguage} using ${options.provider}`
+  );
+
   // Start time counter
   const startTime = Date.now();
-    try {
+  try {
     let result: ConversionResult;
-    
+
     switch (options.provider) {
       case "openai":
         result = await convertWithOpenAI(code, sourceLanguage, options);
@@ -46,21 +52,22 @@ export async function convertCode(
       default:
         throw new Error(`Unsupported AI provider: ${options.provider}`);
     }
-    
+
     // Calculate total processing time if not already calculated
     if (result.metrics && !result.metrics.processingTime) {
       result.metrics.processingTime = Date.now() - startTime;
     }
-    
-    return result;  } catch (error: any) {
+
+    return result;
+  } catch (error: any) {
     console.error(`Conversion error using ${options.provider}:`, error);
     // Return original code in case of failure, with an explanatory comment
     return {
       code: `// CONVERSION ERROR: ${error.message}\n\n${code}`,
       metrics: {
         tokens: { sent: estimateTokenCount(code), received: 0 },
-        processingTime: Date.now() - startTime
-      }
+        processingTime: Date.now() - startTime,
+      },
     };
   }
 }
@@ -81,14 +88,34 @@ async function convertWithOpenAI(
     apiKey: options.apiKey,
   });
 
-  const prompt = createConversionPrompt(code, sourceLanguage, options.targetLanguage, options.customPrompt);
+  const prompt = createConversionPrompt(
+    code,
+    sourceLanguage,
+    options.targetLanguage,
+    options.customPrompt
+  );
   const promptTokens = estimateTokenCount(prompt);
   const startTime = Date.now();
-
   try {
+    // Primeiro, vamos obter informações sobre os arquivos locais
+    const localFiles = await getLocalFilesInfo();
+
+    // Criar um prompt enriquecido com informações dos arquivos locais
+    const enrichedPrompt = `${prompt}
+
+Context from local files:
+${localFiles}
+
+Please use this context to better understand the codebase and provide more accurate conversions.`;
+
     const response = await client.chat.completions.create({
-      model: "gpt-4.1-nano",
-      messages: [{ role: "user", content: prompt }],
+      model: "gpt-4.1-mini",
+      messages: [
+        {
+          role: "user",
+          content: enrichedPrompt,
+        },
+      ],
       temperature: 0.2,
       max_tokens: 4000,
     });
@@ -96,20 +123,21 @@ async function convertWithOpenAI(
     const convertedCode = response.choices[0]?.message?.content || code;
     const sanitizedCode = sanitizeCode(convertedCode);
     const outputTokens = estimateTokenCount(sanitizedCode);
-    
-    // Usar valores reais da API se disponíveis, caso contrário usar nossa estimativa
+
+    // Use actual API values if available, otherwise use our estimate
     const tokenMetrics: TokenMetrics = {
       sent: response.usage?.prompt_tokens || promptTokens,
-      received: response.usage?.completion_tokens || outputTokens
+      received: response.usage?.completion_tokens || outputTokens,
     };
-    
+
     return {
       code: sanitizedCode,
       metrics: {
         tokens: tokenMetrics,
-        processingTime: Date.now() - startTime
-      }
-    };  } catch (error: any) {
+        processingTime: Date.now() - startTime,
+      },
+    };
+  } catch (error: any) {
     console.error("Error calling OpenAI API:", error);
     throw new Error(`Failed to convert code using OpenAI: ${error.message}`);
   }
@@ -127,8 +155,14 @@ async function convertWithGemini(
     throw new Error("Gemini API Key not provided");
   }
 
-  const apiUrl = "https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent";
-  const prompt = createConversionPrompt(code, sourceLanguage, options.targetLanguage, options.customPrompt);
+  const apiUrl =
+    "https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent";
+  const prompt = createConversionPrompt(
+    code,
+    sourceLanguage,
+    options.targetLanguage,
+    options.customPrompt
+  );
   const promptTokens = estimateTokenCount(prompt);
   const startTime = Date.now();
 
@@ -153,21 +187,22 @@ async function convertWithGemini(
       }
     );
 
-    const convertedCode = response.data.candidates[0]?.content?.parts[0]?.text || code;
+    const convertedCode =
+      response.data.candidates[0]?.content?.parts[0]?.text || code;
     const sanitizedCode = sanitizeCode(convertedCode);
     const outputTokens = estimateTokenCount(sanitizedCode);
-      // Gemini doesn't directly return token counts, so we use our estimate
+    // Gemini doesn't directly return token counts, so we use our estimate
     const tokenMetrics: TokenMetrics = {
       sent: promptTokens,
-      received: outputTokens
+      received: outputTokens,
     };
-    
+
     return {
       code: sanitizedCode,
       metrics: {
         tokens: tokenMetrics,
-        processingTime: Date.now() - startTime
-      }
+        processingTime: Date.now() - startTime,
+      },
     };
   } catch (error: any) {
     console.error("Error calling Gemini API:", error);
@@ -191,7 +226,12 @@ async function convertWithAnthropic(
     apiKey: options.apiKey,
   });
 
-  const prompt = createConversionPrompt(code, sourceLanguage, options.targetLanguage, options.customPrompt);
+  const prompt = createConversionPrompt(
+    code,
+    sourceLanguage,
+    options.targetLanguage,
+    options.customPrompt
+  );
   const promptTokens = estimateTokenCount(prompt);
   const startTime = Date.now();
 
@@ -210,7 +250,9 @@ async function convertWithAnthropic(
 
     // Concatenar todos os blocos de texto da resposta
     const convertedCodeBlocks = response.content
-      .filter((block) => block.type === "text" && typeof block.text === "string")
+      .filter(
+        (block) => block.type === "text" && typeof block.text === "string"
+      )
       .map((block) => {
         if (block.type === "text" && typeof block.text === "string") {
           return block.text;
@@ -221,20 +263,21 @@ async function convertWithAnthropic(
 
     const sanitizedCode = sanitizeCode(convertedCodeBlocks);
     const outputTokens = estimateTokenCount(sanitizedCode);
-    
+
     // Anthropic retorna estimativas de token
     const tokenMetrics: TokenMetrics = {
       sent: response.usage?.input_tokens || promptTokens,
-      received: response.usage?.output_tokens || outputTokens
+      received: response.usage?.output_tokens || outputTokens,
     };
-    
+
     return {
       code: sanitizedCode,
       metrics: {
         tokens: tokenMetrics,
-        processingTime: Date.now() - startTime
-      }
-    };  } catch (error: any) {
+        processingTime: Date.now() - startTime,
+      },
+    };
+  } catch (error: any) {
     console.error("Error calling Anthropic API:", error);
     throw new Error(`Failed to convert code using Anthropic: ${error.message}`);
   }
@@ -248,13 +291,18 @@ async function convertWithLLama(
   sourceLanguage: string,
   options: ConversionOptions
 ): Promise<ConversionResult> {
-  const prompt = createConversionPrompt(code, sourceLanguage, options.targetLanguage, options.customPrompt);
+  const prompt = createConversionPrompt(
+    code,
+    sourceLanguage,
+    options.targetLanguage,
+    options.customPrompt
+  );
   const promptTokens = estimateTokenCount(prompt);
   const startTime = Date.now();
-  
+
   try {
     let convertedCode: string;
-    
+
     if (options.provider === "llama") {
       // Validate API settings
       if (!options.apiUrl) {
@@ -265,30 +313,43 @@ async function convertWithLLama(
       }
 
       // Chama a versão da API HTTP
-      convertedCode = await llamaApiConvert(prompt, options.apiUrl, options.apiKey);
+      convertedCode = await llamaApiConvert(
+        prompt,
+        options.apiUrl,
+        options.apiKey
+      );
     } else {
       // Chama a versão local
       convertedCode = await llamaLocalConvert(prompt);
     }
-    
+
     const sanitizedCode = sanitizeCode(convertedCode);
     const outputTokens = estimateTokenCount(sanitizedCode);
-      // Llama doesn't return token counts, so we use our estimate
+    // Llama doesn't return token counts, so we use our estimate
     const tokenMetrics: TokenMetrics = {
       sent: promptTokens,
-      received: outputTokens
+      received: outputTokens,
     };
-    
+
     return {
       code: sanitizedCode,
       metrics: {
         tokens: tokenMetrics,
-        processingTime: Date.now() - startTime
-      }
+        processingTime: Date.now() - startTime,
+      },
     };
   } catch (error: any) {
-    console.error(`Error converting with ${options.provider === "llama" ? "API" : "local"} Llama:`, error);
-    throw new Error(`Failed to convert code using ${options.provider === "llama" ? "API" : "local"} Llama: ${error.message}`);
+    console.error(
+      `Error converting with ${
+        options.provider === "llama" ? "API" : "local"
+      } Llama:`,
+      error
+    );
+    throw new Error(
+      `Failed to convert code using ${
+        options.provider === "llama" ? "API" : "local"
+      } Llama: ${error.message}`
+    );
   }
 }
 
@@ -323,13 +384,15 @@ ${code}
 function sanitizeCode(codeText: string): string {
   // Remove blocos de código markdown
   let cleanedCode = codeText.replace(/```[\w]*\n/g, "").replace(/```$/g, "");
-  
+
   // Remove explicações antes ou depois do código
-  const codeBlockMatch = cleanedCode.match(/^[\s\S]*?((?:import|package|using|#include|function|class|def|pub|const|let|var|void|int|public|private)[\s\S]*$)/);
+  const codeBlockMatch = cleanedCode.match(
+    /^[\s\S]*?((?:import|package|using|#include|function|class|def|pub|const|let|var|void|int|public|private)[\s\S]*$)/
+  );
   if (codeBlockMatch && codeBlockMatch[1]) {
     cleanedCode = codeBlockMatch[1];
   }
-  
+
   return cleanedCode.trim();
 }
 
@@ -343,7 +406,7 @@ export async function convertFileToLanguage(
     throw new Error(`Arquivo não encontrado: ${filePath}`);
   }
 
-  const code = fs.readFileSync(filePath, 'utf8');
+  const code = fs.readFileSync(filePath, "utf8");
   const ext = path.extname(filePath);
   const sourceLanguage = getLanguageFromExtension(ext);
   const prompt = createConversionPrompt(code, sourceLanguage, targetLanguage);
@@ -380,4 +443,78 @@ function getLanguageFromExtension(fileExtension: string): string {
   };
 
   return extensionMap[fileExtension.toLowerCase()] || "plaintext"; // Retorna 'plaintext' como padrão em vez de 'unknown'
+}
+
+/**
+ * Verifica os arquivos dentro das pastas especificadas no computador local
+ */
+function checkFilesInFolders() {
+  const folders = ["destino final", "intermediário", "primária"];
+
+  folders.forEach((folder) => {
+    const folderPath = path.resolve(__dirname, folder);
+
+    if (fs.existsSync(folderPath)) {
+      const files = fs.readdirSync(folderPath);
+      console.log(`Arquivos na pasta '${folder}':`, files);
+    } else {
+      console.warn(`Pasta não encontrada: ${folder}`);
+    }
+  });
+}
+
+// Exportar a função para uso opcional
+export { checkFilesInFolders };
+
+/**
+ * Obtém informações sobre os arquivos nas pastas locais especificadas
+ */
+export async function getLocalFilesInfo(): Promise<string> {
+  const folders = ["destino final", "intermediario", "primaria"];
+  const basePath = "c:\\projetos\\electron-code-migrator";
+  let info = "";
+
+  for (const folder of folders) {
+    const folderPath = path.join(basePath, folder);
+
+    try {
+      if (fs.existsSync(folderPath)) {
+        const files = fs.readdirSync(folderPath, { withFileTypes: true });
+        info += `\n=== Files in ${folder} ===\n`;
+
+        files.forEach((file) => {
+          const filePath = path.join(folderPath, file.name);
+          if (file.isFile()) {
+            const ext = path.extname(file.name);
+            const language = getLanguageFromExtension(ext);
+            info += `- ${file.name} (${language})\n`;
+
+            // Se for um arquivo de código pequeno, incluir uma amostra do conteúdo
+            if ([".js", ".ts", ".py", ".java", ".cs"].includes(ext)) {
+              try {
+                const content = fs.readFileSync(filePath, "utf8");
+                if (content.length < 1000) {
+                  // Apenas arquivos pequenos
+                  info += `  Content preview:\n  ${content.substring(
+                    0,
+                    500
+                  )}...\n`;
+                }
+              } catch (error) {
+                info += `  Error reading file: ${error}\n`;
+              }
+            }
+          } else if (file.isDirectory()) {
+            info += `- ${file.name}/ (directory)\n`;
+          }
+        });
+      } else {
+        info += `\n=== ${folder} ===\nFolder not found at: ${folderPath}\n`;
+      }
+    } catch (error) {
+      info += `\n=== ${folder} ===\nError accessing folder: ${error}\n`;
+    }
+  }
+
+  return info;
 }

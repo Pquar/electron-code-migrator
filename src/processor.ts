@@ -14,6 +14,21 @@ import {
 import { app } from "electron";
 import axios from "axios";
 
+// MCP Integration imports
+interface MCPFileInfo {
+  path: string;
+  name: string;
+  type: 'file' | 'directory';
+  content?: string;
+  extension?: string;
+}
+
+interface MCPFolderContext {
+  folderName: string;
+  files: MCPFileInfo[];
+  totalFiles: number;
+}
+
 enum ModelPaths {
   llama = "Llama-4-Scout-17B-16E-Instruct-UD-Q3_K_XL.gguf",
   mistral = "mistral-7b-instruct-v0.1.Q5_K_M.gguf",
@@ -700,12 +715,13 @@ export async function readFile(targetPath: string): Promise<string> {
 
 // Interface for AI agent suggestions
 export interface AgentSuggestion {
-  type: "move" | "rename" | "create" | "delete" | "modify";
+  type: "move" | "rename" | "create" | "delete" | "modify" | "mcp_create" | "mcp_modify" | "mcp_delete";
   description: string;
   path?: string;
   destination?: string;
   newName?: string;
   content?: string;
+  mcpFolder?: string;
 }
 
 /**
@@ -798,6 +814,13 @@ export async function analyzeCodeWithAgent(
   const { conversionOptions, outputFolder } = options;
   const suggestions: AgentSuggestion[] = [];
 
+  // Initialize MCP File Manager
+  const mcpManager = new MCPFileManager();
+  
+  // Get MCP folders context
+  const mcpContexts = await mcpManager.getAllFoldersContext();
+  const mcpContextFormatted = mcpManager.formatContextForAI(mcpContexts);
+
   // Prepare a summary of files to send to the AI
   const filesSummary = await Promise.all(
     files.map(async (file) => {
@@ -809,89 +832,114 @@ export async function analyzeCodeWithAgent(
     })
   );
 
-  // Build the prompt for the AI
+  // Build the enhanced prompt for the AI with MCP context
   const prompt = `
-You are an assistant specialized in organizing code. Analyze the converted files for ${
-    conversionOptions.targetLanguage
-  } and suggest reorganizations that make the project cleaner and well-structured.
+You are an advanced AI assistant specialized in organizing and improving code projects. You have access to local files in three specific folders and can perform file operations in the "destino final" folder.
+
+AVAILABLE MCP FOLDERS:
+- "primaria": Source/input files (read-only)
+- "intermediario": Intermediate processing files (read-only)  
+- "destino final": Final output files (read/write/create/delete)
+
+${mcpContextFormatted}
+
+CURRENT CONVERTED FILES TO ANALYZE:
+${JSON.stringify(filesSummary, null, 2)}
+
+TARGET LANGUAGE: ${conversionOptions.targetLanguage}
+
+YOU CAN PERFORM THESE ACTIONS:
+1. Analyze code patterns from "primaria" and "intermediario" folders
+2. Suggest improvements based on existing code structure
+3. Create new files in "destino final" folder
+4. Modify existing files in "destino final" folder
+5. Delete unnecessary files in "destino final" folder
+6. Move and organize files within the project
+
+ENHANCED SUGGESTION TYPES:
+{
+  "type": "move" | "rename" | "create" | "delete" | "modify" | "mcp_create" | "mcp_modify" | "mcp_delete",
+  "description": "string describing the action",
+  "path": "path/to/file",
+  "destination": "new/path" (for move),
+  "newName": "new-name.ext" (for rename),
+  "content": "new content" (for modify/create),
+  "mcpFolder": "destino final" (for MCP operations)
+}
 
 IMPORTANT: You must respond ONLY with a valid JSON array containing suggestions. Do not include any explanatory text outside the JSON.
 
-Each suggestion in the array must follow this exact structure:
-{
-  "type": "move" | "rename" | "create" | "delete" | "modify",
-  "description": "string describing the action",
-  "path": "path/to/file" (optional for create type),
-  "destination": "new/path" (required for move type),
-  "newName": "new-name.ext" (required for rename type),
-  "content": "new content" (required for modify type)
-}
+Focus on:
+1. Code organization and structure improvements
+2. Creating utilities or helper files in "destino final" based on patterns from other folders
+3. Consolidating common functionality
+4. Improving code readability and maintainability
+5. Leveraging existing code from "primaria" and "intermediario" folders
 
-List of converted files:
-${JSON.stringify(filesSummary, null, 2)}
-
-Remember:
-1. Response must be a single JSON array containing up to 5 suggestions
-2. Each suggestion must have all required fields for its type
-3. Do not include any text outside the JSON array
-4. JSON must be properly formatted and valid
-5. Prioritize the most important suggestions
-
-Example of valid response format:
-[{"type":"move","description":"Move utilities to dedicated folder","path":"utils.ts","destination":"utils/utils.ts"}]
+Example response format:
+[
+  {"type":"mcp_create","description":"Create utility module based on common patterns","path":"utils.py","content":"# Utility functions\\ndef helper():\\n    pass","mcpFolder":"destino final"},
+  {"type":"modify","description":"Improve main module structure","path":"main.py","content":"# Improved code"}
+]
 `;
+    try {
+      // Get response from selected provider
+      const aiResponse = await analyzeWithProvider(
+        prompt,
+        conversionOptions.provider,
+        conversionOptions.apiKey,
+        conversionOptions.apiUrl
+      );
 
-  try {    // Get response from selected provider
-    const aiResponse = await analyzeWithProvider(
-      prompt,
-      conversionOptions.provider,
-      conversionOptions.apiKey,
-      conversionOptions.apiUrl
-    );
+      // Extract JSON from response using improved matching
+      const jsonMatch = aiResponse.match(
+        /\[(?:[^[\]]*|\[(?:[^[\]]*|\[[^[\]]*\])*\])*\]/
+      );
+      if (jsonMatch) {
+        try {
+          // Attempt to parse the matched JSON
+          const parsedSuggestions = JSON.parse(jsonMatch[0]) as AgentSuggestion[];
 
-    // Extract JSON from response using improved matching
-    const jsonMatch = aiResponse.match(
-      /\[(?:[^[\]]*|\[(?:[^[\]]*|\[[^[\]]*\])*\])*\]/
-    );
-    if (jsonMatch) {
-      try {
-        // Attempt to parse the matched JSON
-        const parsedSuggestions = JSON.parse(jsonMatch[0]) as AgentSuggestion[];
+          // Validate each suggestion has required fields based on its type
+          return parsedSuggestions
+            .filter((s) => {
+              if (!s.type || !s.description) return false;
 
-        // Validate each suggestion has required fields based on its type
-        return parsedSuggestions
-          .filter((s) => {
-            if (!s.type || !s.description) return false;
-
-            switch (s.type) {
-              case "move":
-                return !!s.path && !!s.destination;
-              case "rename":
-                return !!s.path && !!s.newName;
-              case "create":
-                return !!s.path;
-              case "delete":
-                return !!s.path;
-              case "modify":
-                return !!s.path && !!s.content;
-              default:
-                return false;
-            }
-          })
-          .slice(0, 5); // Limit to 5 suggestions
-      } catch (parseError) {
-        console.error("Error parsing JSON suggestions:", parseError);
-        return [];
+              switch (s.type) {
+                case "move":
+                  return !!s.path && !!s.destination;
+                case "rename":
+                  return !!s.path && !!s.newName;
+                case "create":
+                  return !!s.path;
+                case "delete":
+                  return !!s.path;
+                case "modify":
+                  return !!s.path && !!s.content;
+                case "mcp_create":
+                  return !!s.path && !!s.content;
+                case "mcp_modify":
+                  return !!s.path && !!s.content;
+                case "mcp_delete":
+                  return !!s.path;
+                default:
+                  return false;
+              }
+            })
+            .slice(0, 10); // Increased limit for MCP operations
+        } catch (parseError) {
+          console.error("Error parsing JSON suggestions:", parseError);
+          return [];
+        }
       }
-    }
 
-    console.error("No valid JSON array found in AI response");
-    return [];
-  } catch (error) {
-    console.error("Error analyzing code with AI agent:", error);
-    return [];
+      console.error("No valid JSON array found in AI response");
+      return [];
+    } catch (error) {
+      console.error("Error analyzing code with AI agent:", error);
+      return [];
+    }
   }
-}
 
 /**
  * Executes AI agent suggestions to reorganize files
@@ -906,6 +954,7 @@ export async function executeAgentSuggestions(
   Array<{ suggestion: AgentSuggestion; success: boolean; error?: string }>
 > {
   const results = [];
+  const mcpManager = new MCPFileManager();
 
   for (const suggestion of suggestions) {
     try {
@@ -955,6 +1004,37 @@ export async function executeAgentSuggestions(
             results.push({ suggestion, success: true });
           }
           break;
+
+        // MCP Operations
+        case "mcp_create":
+          if (suggestion.path && suggestion.content) {
+            const success = await mcpManager.createFileInDestination(suggestion.path, suggestion.content);
+            results.push({ suggestion, success });
+            if (!success) {
+              results[results.length - 1].error = "Failed to create file in destination folder";
+            }
+          }
+          break;
+
+        case "mcp_modify":
+          if (suggestion.path && suggestion.content) {
+            const success = await mcpManager.modifyFileInDestination(suggestion.path, suggestion.content);
+            results.push({ suggestion, success });
+            if (!success) {
+              results[results.length - 1].error = "Failed to modify file in destination folder or file not found";
+            }
+          }
+          break;
+
+        case "mcp_delete":
+          if (suggestion.path) {
+            const success = await mcpManager.deleteFileInDestination(suggestion.path);
+            results.push({ suggestion, success });
+            if (!success) {
+              results[results.length - 1].error = "Failed to delete file from destination folder or file not found";
+            }
+          }
+          break;
       }
     } catch (error: any) {
       results.push({
@@ -966,4 +1046,164 @@ export async function executeAgentSuggestions(
   }
 
   return results;
+}
+
+/**
+ * MCP File Manager for handling files in the three MCP folders
+ */
+class MCPFileManager {
+  private basePath: string;
+  private mcpFolders = ["primaria", "intermediario", "destino final"];
+
+  constructor(basePath: string = "c:\\projetos\\electron-code-migrator") {
+    this.basePath = basePath;
+  }
+
+  /**
+   * Gets comprehensive context from all MCP folders
+   */
+  async getAllFoldersContext(): Promise<MCPFolderContext[]> {
+    const contexts: MCPFolderContext[] = [];
+
+    for (const folderName of this.mcpFolders) {
+      try {
+        const folderPath = path.join(this.basePath, folderName);
+        const files = await this.getFilesInFolder(folderPath);
+        
+        contexts.push({
+          folderName,
+          files,
+          totalFiles: files.length
+        });
+      } catch (error) {
+        console.error(`Error reading folder ${folderName}:`, error);
+        contexts.push({
+          folderName,
+          files: [],
+          totalFiles: 0
+        });
+      }
+    }
+
+    return contexts;
+  }
+
+  /**
+   * Gets files information from a specific folder
+   */
+  private async getFilesInFolder(folderPath: string): Promise<MCPFileInfo[]> {
+    const files: MCPFileInfo[] = [];
+
+    if (!(await fs.pathExists(folderPath))) {
+      return files;
+    }
+
+    const items = await fs.readdir(folderPath, { withFileTypes: true });
+
+    for (const item of items) {
+      const itemPath = path.join(folderPath, item.name);
+      const mcpFile: MCPFileInfo = {
+        path: itemPath,
+        name: item.name,
+        type: item.isDirectory() ? 'directory' : 'file'
+      };
+
+      if (item.isFile()) {
+        mcpFile.extension = path.extname(item.name);
+        // Read content for text files (limit size to avoid token issues)
+        try {
+          const content = await fs.readFile(itemPath, 'utf-8');
+          mcpFile.content = content.length > 2000 ? content.substring(0, 2000) + '...' : content;
+        } catch (error) {
+          mcpFile.content = '[Binary file or read error]';
+        }
+      }
+
+      files.push(mcpFile);
+    }
+
+    return files;
+  }
+
+  /**
+   * Creates a new file in the "destino final" folder
+   */
+  async createFileInDestination(fileName: string, content: string): Promise<boolean> {
+    try {
+      const destinationPath = path.join(this.basePath, "destino final", fileName);
+      await fs.ensureDir(path.dirname(destinationPath));
+      await fs.writeFile(destinationPath, content, 'utf-8');
+      return true;
+    } catch (error) {
+      console.error(`Error creating file ${fileName}:`, error);
+      return false;
+    }
+  }
+
+  /**
+   * Modifies an existing file in the "destino final" folder
+   */
+  async modifyFileInDestination(fileName: string, content: string): Promise<boolean> {
+    try {
+      const destinationPath = path.join(this.basePath, "destino final", fileName);
+      if (await fs.pathExists(destinationPath)) {
+        await fs.writeFile(destinationPath, content, 'utf-8');
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error(`Error modifying file ${fileName}:`, error);
+      return false;
+    }
+  }
+
+  /**
+   * Deletes a file from the "destino final" folder
+   */
+  async deleteFileInDestination(fileName: string): Promise<boolean> {
+    try {
+      const destinationPath = path.join(this.basePath, "destino final", fileName);
+      if (await fs.pathExists(destinationPath)) {
+        await fs.remove(destinationPath);
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error(`Error deleting file ${fileName}:`, error);
+      return false;
+    }
+  }
+
+  /**
+   * Formats the MCP context for AI prompts
+   */
+  formatContextForAI(contexts: MCPFolderContext[]): string {
+    let formatted = "=== MCP LOCAL FILES CONTEXT ===\n\n";
+
+    for (const context of contexts) {
+      formatted += `📁 FOLDER: ${context.folderName.toUpperCase()}\n`;
+      formatted += `Files found: ${context.totalFiles}\n\n`;
+
+      if (context.files.length === 0) {
+        formatted += "  (No files found)\n\n";
+        continue;
+      }
+
+      for (const file of context.files) {
+        formatted += `  📄 ${file.name}`;
+        if (file.extension) {
+          formatted += ` (${file.extension})`;
+        }
+        formatted += `\n`;
+
+        if (file.content && file.type === 'file') {
+          formatted += `     Content preview:\n`;
+          formatted += `     ${file.content.split('\n').map(line => `     ${line}`).join('\n')}\n\n`;
+        }
+      }
+      formatted += "\n";
+    }
+
+    return formatted;
+  }
 }

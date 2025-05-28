@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "local-file-access": {
+      "command": "node",
+      "args": ["dist/mcp-server.js"],
+      "env": {
+        "NODE_PATH": "node_modules"
+      }
+    }
+  }
+}

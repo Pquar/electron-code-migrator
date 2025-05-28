@@ -981,8 +981,7 @@ document.addEventListener("DOMContentLoaded", () => {
       document.getElementById("btnAnalyzeWithIA")?.removeAttribute("disabled");
     }
   }
-  
-  function displaySuggestions(suggestions: any[]) {
+    function displaySuggestions(suggestions: any[]) {
     const suggestionsList = document.getElementById("suggestionsList");
     if (!suggestionsList) return;
     suggestionsList.innerHTML = "";
@@ -990,6 +989,8 @@ document.addEventListener("DOMContentLoaded", () => {
       const item = document.createElement("div");
       item.className = "p-3 bg-blue-50 border border-blue-200 rounded";
       let details = "";
+      let badge = "";
+      
       switch (suggestion.type) {
         case "move":
           details = `Move <span class="font-semibold">${suggestion.path}</span> to <span class="font-semibold">${suggestion.destination}</span>`;
@@ -1006,15 +1007,28 @@ document.addEventListener("DOMContentLoaded", () => {
         case "modify":
           details = `Modify <span class="font-semibold">${suggestion.path}</span>`;
           break;
+        case "mcp_create":
+          details = `Create file <span class="font-semibold">${suggestion.path}</span> in MCP destination folder`;
+          badge = '<span class="inline-block px-2 py-1 text-xs bg-green-100 text-green-800 rounded-full ml-2">MCP</span>';
+          break;
+        case "mcp_modify":
+          details = `Modify file <span class="font-semibold">${suggestion.path}</span> in MCP destination folder`;
+          badge = '<span class="inline-block px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded-full ml-2">MCP</span>';
+          break;
+        case "mcp_delete":
+          details = `Delete file <span class="font-semibold">${suggestion.path}</span> from MCP destination folder`;
+          badge = '<span class="inline-block px-2 py-1 text-xs bg-red-100 text-red-800 rounded-full ml-2">MCP</span>';
+          break;
       }
       item.innerHTML = `
         <div class="flex items-start">
           <div class="flex-shrink-0 mt-0.5">
             <input type="checkbox" id="suggestion-${index}" class="suggestion-checkbox" checked />
           </div>
-          <div class="ml-3">
-            <p class="text-sm font-medium text-blue-800">${suggestion.type.toUpperCase()}: ${details}</p>
+          <div class="ml-3 flex-1">
+            <p class="text-sm font-medium text-blue-800">${suggestion.type.toUpperCase()}: ${details}${badge}</p>
             <p class="text-sm text-gray-600">${suggestion.description}</p>
+            ${suggestion.content ? `<div class="mt-2 p-2 bg-gray-100 rounded text-xs font-mono max-h-20 overflow-y-auto">${suggestion.content.substring(0, 200)}${suggestion.content.length > 200 ? '...' : ''}</div>` : ''}
           </div>
         </div>
       `;
