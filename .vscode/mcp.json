@@ -1,0 +1,74 @@
+{
+  "inputs": [
+    {
+      "id": "github_pat",
+      "description": "GitHub personal access token",
+      "type": "promptString",
+      "password": true
+    },
+    {
+      "id": "openai_api_key",
+      "description": "OpenAI API key for code conversion",
+      "type": "promptString",
+      "password": true
+    },
+    {
+      "id": "anthropic_api_key",
+      "description": "Anthropic API key for Claude models",
+      "type": "promptString",
+      "password": true
+    },
+    {
+      "id": "gemini_api_key",
+      "description": "Google Gemini API key",
+      "type": "promptString",
+      "password": true
+    },
+    {
+      "id": "base_path",
+      "description": "Base path for project files",
+      "type": "promptString",
+      "default": "c:\\projetos\\electron-code-migrator"
+    }
+  ],
+  "servers": {
+    "electron-code-migrator-mcp": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["c:\\projetos\\electron-code-migrator\\dist\\mcp-server.js"],
+      "env": {
+        "NODE_ENV": "production",
+        "BASE_PATH": "${input:base_path}",
+        "OPENAI_API_KEY": "${input:openai_api_key}",
+        "ANTHROPIC_API_KEY": "${input:anthropic_api_key}",
+        "GEMINI_API_KEY": "${input:gemini_api_key}"
+      }
+    },
+    "electron-code-migrator-dev": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["c:\\projetos\\electron-code-migrator\\dist\\mcp-server.js"],
+      "env": {
+        "NODE_ENV": "development",
+        "BASE_PATH": "${input:base_path}",
+        "OPENAI_API_KEY": "${input:openai_api_key}",
+        "ANTHROPIC_API_KEY": "${input:anthropic_api_key}",
+        "GEMINI_API_KEY": "${input:gemini_api_key}"
+      }
+    },
+   /*  "github": {
+      "type": "stdio",
+      "command": "docker",
+      "args": [
+        "run",
+        "-i",
+        "--rm",
+        "-e",
+        "GITHUB_PERSONAL_ACCESS_TOKEN",
+        "ghcr.io/github/github-mcp-server"      ],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "${input:github_pat}"
+      }
+    } */
+  }
+}

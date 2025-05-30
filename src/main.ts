@@ -14,12 +14,40 @@ import {
   executeAgentSuggestions,
   AgentSuggestion,
 } from "./processor";
-import main from "./mcp-server";  
+import { startMcpServer, stopMcpServer, getMcpServer } from "./mcp-server";
 
 let mainWindow: BrowserWindow | null = null;
 
-function createWindow() {
-  main
+/**
+ * Initialize MCP server integration
+ */
+async function initializeMcpServer() {
+  try {
+    console.log("Initializing MCP server...");
+    await startMcpServer();
+    console.log("MCP server integrated successfully with Electron app");
+  } catch (error) {
+    console.error("Failed to initialize MCP server:", error);
+  }
+}
+
+/**
+ * Cleanup MCP server on app termination
+ */
+async function cleanupMcpServer() {
+  try {
+    console.log("Cleaning up MCP server...");
+    await stopMcpServer();
+    console.log("MCP server cleanup completed");
+  } catch (error) {
+    console.error("Error during MCP server cleanup:", error);
+  }
+}
+
+async function createWindow() {
+  // Initialize MCP server when creating the window
+  await initializeMcpServer();
+  
   mainWindow = new BrowserWindow({
     width: 1000,
     height: 800,
@@ -52,31 +80,39 @@ function createWindow() {
 // Application initialization
 app
   .whenReady()
-  .then(() => {
+  .then(async () => {
     // Create the main window
-    createWindow();
+    await createWindow();
 
     // On macOS, it's common to recreate the window when the dock icon is clicked
-    app.on("activate", () => {
+    app.on("activate", async () => {
       if (BrowserWindow.getAllWindows().length === 0) {
-        createWindow();
+        await createWindow();
       }
     });
 
     // Set up IPC handlers after the application is ready
     setupIpcHandlers();
 
-    console.log("Application started");
+    console.log("Application started with MCP integration");
   })
   .catch((error) => {
     console.error("Error starting application:", error);
   });
 
 // Close the application when all windows are closed (except on macOS)
-app.on("window-all-closed", () => {
+app.on("window-all-closed", async () => {
   if (process.platform !== "darwin") {
+    await cleanupMcpServer();
     app.quit();
   }
+});
+
+// Handle app termination
+app.on("before-quit", async (event) => {
+  event.preventDefault();
+  await cleanupMcpServer();
+  app.exit();
 });
 
 /**
@@ -348,7 +384,6 @@ function setupIpcHandlers() {
       };
     }
   });
-
   // Handler to load settings
   ipcMain.handle("load-settings", async () => {
     try {
@@ -366,6 +401,47 @@ function setupIpcHandlers() {
       return {
         success: false,
         error: (error as Error).message,
+      };
+    }
+  });
+
+  // Handler to check MCP server status
+  ipcMain.handle("mcp-server-status", async () => {
+    try {
+      const mcpServer = getMcpServer();
+      const isRunning = mcpServer ? mcpServer.isServerRunning() : false;
+      
+      return {
+        success: true,
+        isRunning,
+        message: isRunning ? "MCP Server is running" : "MCP Server is not running"
+      };
+    } catch (error) {
+      console.error("Error checking MCP server status:", error);
+      return {
+        success: false,
+        isRunning: false,
+        error: (error as Error).message
+      };
+    }
+  });
+
+  // Handler to restart MCP server
+  ipcMain.handle("restart-mcp-server", async () => {
+    try {
+      console.log("Restarting MCP server...");
+      await stopMcpServer();
+      await startMcpServer();
+      
+      return {
+        success: true,
+        message: "MCP Server restarted successfully"
+      };
+    } catch (error) {
+      console.error("Error restarting MCP server:", error);
+      return {
+        success: false,
+        error: (error as Error).message
       };
     }
   });

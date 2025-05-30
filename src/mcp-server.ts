@@ -1,15 +1,14 @@
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import {
-  ListPromptsRequestSchema,
-  GetPromptRequestSchema,
+  ListToolsRequestSchema,
   CallToolRequestSchema,
   McpError,
   ErrorCode
 } from "@modelcontextprotocol/sdk/types.js";
-import { z } from "zod";
 import * as fs from "fs";
 import * as path from "path";
+import { spawn, ChildProcess } from "child_process";
 
 /**
  * MCP Server for local file access
@@ -17,7 +16,8 @@ import * as path from "path";
  */
 class LocalFileAccessServer {
   private server: Server;
-
+  private isRunning: boolean = false;
+  
   constructor() {
     this.server = new Server(
       {
@@ -26,6 +26,7 @@ class LocalFileAccessServer {
       },
       {
         capabilities: {
+          tools: {},
           prompts: {}
         }
       }
@@ -33,10 +34,9 @@ class LocalFileAccessServer {
 
     this.setupToolHandlers();
   }
-
   private setupToolHandlers() {
     // List available tools
-    this.server.setRequestHandler(ListPromptsRequestSchema, async () => {
+    this.server.setRequestHandler(ListToolsRequestSchema, async () => {
       return {
         tools: [
           {
@@ -238,12 +238,65 @@ class LocalFileAccessServer {
       ],
     };
   }
-
   async run() {
     const transport = new StdioServerTransport();
     await this.server.connect(transport);
+    this.isRunning = true;
     console.error("Local File Access MCP server running on stdio");
   }
+
+  isServerRunning(): boolean {
+    return this.isRunning;
+  }
+
+  async stop() {
+    if (this.isRunning) {
+      // Note: SDK doesn't have a disconnect method, so we just mark as not running
+      this.isRunning = false;
+      console.error("Local File Access MCP server stopped");
+    }
+  }
+}
+
+// Global server instance for Electron integration
+let mcpServerInstance: LocalFileAccessServer | null = null;
+
+/**
+ * Start MCP server for Electron integration
+ */
+async function startMcpServer(): Promise<LocalFileAccessServer> {
+  if (mcpServerInstance && mcpServerInstance.isServerRunning()) {
+    console.log("MCP server already running");
+    return mcpServerInstance;
+  }
+
+  try {
+    mcpServerInstance = new LocalFileAccessServer();
+    await mcpServerInstance.run();
+    console.log("MCP server started successfully for Electron integration.");
+    return mcpServerInstance;
+  } catch (error) {
+    console.error("Error starting MCP server:", error);
+    throw error;
+  }
+}
+
+/**
+ * Stop MCP server
+ */
+async function stopMcpServer(): Promise<void> {
+  if (mcpServerInstance) {
+    await mcpServerInstance.stop();
+    mcpServerInstance = null;
+    console.log("MCP server stopped.");
+  }
+}
+
+/**
+ * Get current MCP server instance
+ */
+function getMcpServer(): LocalFileAccessServer | null {
+  return mcpServerInstance;
 }
 async function main() {
   try {
@@ -254,5 +307,12 @@ async function main() {
     console.error("Error starting MCP server:", error);
   }
 }
+
+// Execute main function when script is run directly
+if (require.main === module) {
+  main();
+}
+
 export default main;
+export { startMcpServer, stopMcpServer, getMcpServer, LocalFileAccessServer };
 
