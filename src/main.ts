@@ -14,10 +14,12 @@ import {
   executeAgentSuggestions,
   AgentSuggestion,
 } from "./processor";
+import main from "./mcp-server";  
 
 let mainWindow: BrowserWindow | null = null;
 
 function createWindow() {
+  main
   mainWindow = new BrowserWindow({
     width: 1000,
     height: 800,

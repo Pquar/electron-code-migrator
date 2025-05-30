@@ -1,11 +1,13 @@
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import {
+  ListPromptsRequestSchema,
+  GetPromptRequestSchema,
   CallToolRequestSchema,
-  ErrorCode,
-  ListToolsRequestSchema,
   McpError,
+  ErrorCode
 } from "@modelcontextprotocol/sdk/types.js";
+import { z } from "zod";
 import * as fs from "fs";
 import * as path from "path";
 
@@ -24,8 +26,8 @@ class LocalFileAccessServer {
       },
       {
         capabilities: {
-          tools: {},
-        },
+          prompts: {}
+        }
       }
     );
 
@@ -34,7 +36,7 @@ class LocalFileAccessServer {
 
   private setupToolHandlers() {
     // List available tools
-    this.server.setRequestHandler(ListToolsRequestSchema, async () => {
+    this.server.setRequestHandler(ListPromptsRequestSchema, async () => {
       return {
         tools: [
           {
@@ -243,7 +245,14 @@ class LocalFileAccessServer {
     console.error("Local File Access MCP server running on stdio");
   }
 }
+async function main() {
+  try {
+    const server = new LocalFileAccessServer();
+    await server.run();
+    console.log("MCP server started successfully.");
+  } catch (error) {
+    console.error("Error starting MCP server:", error);
+  }
+}
+export default main;
 
-// Start the server
-const server = new LocalFileAccessServer();
-server.run().catch(console.error);

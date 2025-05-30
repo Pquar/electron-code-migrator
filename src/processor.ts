@@ -650,14 +650,13 @@ export function estimateTokenCount(text: string): number {
   const words = text.split(/\s+/).filter(Boolean);
   const symbols = text.match(/[{}()\[\]<>=+\-*/%!&|^~;:,]/g) || [];
   const stringLiterals = text.match(/"[^"]*"|'[^']*'|`[^`]*`/g) || [];
-
   // Each word is approximately 1-2 tokens
   // Each symbol is generally 1 token
   // String literals are calculated by length
   const wordTokens = words.length;
   const symbolTokens = symbols.length;
   const stringTokens = stringLiterals.reduce(
-    (acc, str) => acc + Math.ceil(str.length / 4),
+    (acc: number, str: string) => acc + Math.ceil(str.length / 4),
     0
   );
 
