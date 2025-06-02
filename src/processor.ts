@@ -35,9 +35,9 @@ enum ModelPaths {
 }
 
 const MODEL_PATH = path.resolve(
-  process.env.NODE_ENV === "development"
+  process.env.NODE_ENV === "development" || process.env.NODE_ENV === "test"
     ? path.join(process.cwd(), "llms") // Point to the correct folder
-    : path.join(app.getPath("userData"), "llms"),
+    : path.join(app?.getPath?.("userData") || process.cwd(), "llms"),
   ModelPaths.llama
 );
 

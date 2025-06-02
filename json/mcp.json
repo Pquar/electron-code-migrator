@@ -1,0 +1,1240 @@
+{
+  "inputs": [
+    {
+      "id": "github_pat",
+      "description": "GitHub personal access token",
+      "type": "promptString",
+      "password": true
+    },
+    {
+      "id": "openai_api_key",
+      "description": "OpenAI API key for code conversion",
+      "type": "promptString",
+      "password": true
+    },
+    {
+      "id": "anthropic_api_key",
+      "description": "Anthropic API key for Claude models",
+      "type": "promptString",
+      "password": true
+    },
+    {
+      "id": "gemini_api_key",
+      "description": "Google Gemini API key",
+      "type": "promptString",
+      "password": true
+    },
+    {
+      "id": "base_path",
+      "description": "Base path for project files",
+      "type": "promptString",
+      "default": "c:\\projetos\\electron-code-migrator"
+    }
+  ],
+  "servers": {
+    "github": {
+      "type": "stdio",
+      "command": "docker",
+      "args": [
+        "run",
+        "-i",
+        "--rm",
+        "-e",
+        "GITHUB_PERSONAL_ACCESS_TOKEN",
+        "ghcr.io/github/github-mcp-server"
+      ],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "${input:github_pat}"
+      }
+    },
+    "electron-code-migrator": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["dist/mcp-server.js"],
+      "env": {
+        "NODE_PATH": "node_modules",
+        "BASE_PATH": "${input:base_path}",
+        "OPENAI_API_KEY": "${input:openai_api_key}",
+        "ANTHROPIC_API_KEY": "${input:anthropic_api_key}",
+        "GEMINI_API_KEY": "${input:gemini_api_key}"
+      }
+    },
+    "enhanced-processor": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "-e",
+        "const { analyzeCodeWithAgent } = require('./dist/processor.js'); console.log('Enhanced processor with MCP ready');"
+      ],
+      "env": {
+        "NODE_PATH": "node_modules",
+        "BASE_PATH": "${input:base_path}",
+        "OPENAI_API_KEY": "${input:openai_api_key}",
+        "ANTHROPIC_API_KEY": "${input:anthropic_api_key}",
+        "GEMINI_API_KEY": "${input:gemini_api_key}"
+      }
+    },
+    "mcp-file-manager": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["-e", "console.log('MCP File Manager ready for operations');"],
+      "env": {
+        "NODE_PATH": "node_modules",
+        "BASE_PATH": "${input:base_path}"
+      }
+    },
+    "code-converter": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "-e",
+        "const { MCPIntegratedConverter } = require('./dist/mcp-converter.js'); const converter = new MCPIntegratedConverter('${input:openai_api_key}'); console.log('MCP Code Converter ready');"
+      ],
+      "env": {
+        "NODE_PATH": "node_modules",
+        "OPENAI_API_KEY": "${input:openai_api_key}",
+        "ANTHROPIC_API_KEY": "${input:anthropic_api_key}",
+        "GEMINI_API_KEY": "${input:gemini_api_key}",
+        "BASE_PATH": "${input:base_path}"
+      }
+    },
+    "demo-server": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["dist/full-mcp-demo.js"],
+      "env": {
+        "NODE_PATH": "node_modules",
+        "BASE_PATH": "${input:base_path}"
+      }
+    }
+  },
+  "tools": [
+    {
+      "name": "list_files_in_folder",
+      "description": "Lista arquivos em uma pasta específica (primaria, intermediario, destino final)",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "folderName": {
+            "type": "string",
+            "description": "Nome da pasta: primaria, intermediario, ou destino final",
+            "enum": ["primaria", "intermediario", "destino final"]
+          },
+          "basePath": {
+            "type": "string",
+            "description": "Caminho base onde as pastas estão localizadas",
+            "default": "c:\\projetos\\electron-code-migrator"
+          }
+        },
+        "required": ["folderName"]
+      }
+    },
+    {
+      "name": "read_file_content",
+      "description": "Lê o conteúdo de um arquivo específico",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "filePath": {
+            "type": "string",
+            "description": "Caminho completo do arquivo a ser lido"
+          },
+          "maxLength": {
+            "type": "number",
+            "description": "Tamanho máximo do conteúdo a ser retornado",
+            "default": 2000
+          }
+        },
+        "required": ["filePath"]
+      }
+    },
+    {
+      "name": "search_files_by_extension",
+      "description": "Busca arquivos por extensão nas pastas MCP",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "extension": {
+            "type": "string",
+            "description": "Extensão do arquivo (.js, .ts, .py, .java, etc.)"
+          },
+          "folderName": {
+            "type": "string",
+            "description": "Pasta específica para buscar (opcional)",
+            "enum": ["primaria", "intermediario", "destino final"]
+          }
+        },
+        "required": ["extension"]
+      }
+    },
+    {
+      "name": "get_all_folders_context",
+      "description": "Obtém contexto completo de todas as pastas MCP",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "includeContent": {
+            "type": "boolean",
+            "description": "Se deve incluir preview do conteúdo dos arquivos",
+            "default": true
+          },
+          "maxContentLength": {
+            "type": "number",
+            "description": "Tamanho máximo do preview de conteúdo",
+            "default": 2000
+          }
+        }
+      }
+    },
+    {
+      "name": "analyze_code_with_agent",
+      "description": "Analisa código com IA e contexto MCP para sugestões inteligentes",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "files": {
+            "type": "array",
+            "description": "Lista de arquivos para analisar",
+            "items": {
+              "type": "object",
+              "properties": {
+                "simplified": {
+                  "type": "string",
+                  "description": "Caminho do arquivo simplificado"
+                },
+                "converted": {
+                  "type": "string",
+                  "description": "Caminho do arquivo convertido"
+                }
+              },
+              "required": ["simplified", "converted"]
+            }
+          },
+          "targetLanguage": {
+            "type": "string",
+            "description": "Linguagem alvo para conversão"
+          },
+          "provider": {
+            "type": "string",
+            "description": "Provedor de IA (openai, gemini, anthropic, llama)",
+            "enum": ["openai", "gemini", "anthropic", "llama"]
+          }
+        },
+        "required": ["files", "targetLanguage", "provider"]
+      }
+    },
+    {
+      "name": "create_file_in_destination",
+      "description": "Cria um novo arquivo na pasta 'destino final'",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "fileName": {
+            "type": "string",
+            "description": "Nome do arquivo a ser criado"
+          },
+          "content": {
+            "type": "string",
+            "description": "Conteúdo do arquivo"
+          }
+        },
+        "required": ["fileName", "content"]
+      }
+    },
+    {
+      "name": "modify_file_in_destination",
+      "description": "Modifica um arquivo existente na pasta 'destino final'",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "fileName": {
+            "type": "string",
+            "description": "Nome do arquivo a ser modificado"
+          },
+          "content": {
+            "type": "string",
+            "description": "Novo conteúdo do arquivo"
+          }
+        },
+        "required": ["fileName", "content"]
+      }
+    },
+    {
+      "name": "delete_file_in_destination",
+      "description": "Remove um arquivo da pasta 'destino final'",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "fileName": {
+            "type": "string",
+            "description": "Nome do arquivo a ser removido"
+          }
+        },
+        "required": ["fileName"]
+      }
+    },
+    {
+      "name": "convert_code_with_context",
+      "description": "Converte código usando contexto local dos arquivos MCP",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "Código fonte a ser convertido"
+          },
+          "sourceLanguage": {
+            "type": "string",
+            "description": "Linguagem de origem"
+          },
+          "targetLanguage": {
+            "type": "string",
+            "description": "Linguagem de destino"
+          },
+          "customPrompt": {
+            "type": "string",
+            "description": "Prompt personalizado para conversão (opcional)"
+          },
+          "provider": {
+            "type": "string",
+            "description": "Provedor de IA (openai, gemini, anthropic, llama)",
+            "enum": ["openai", "gemini", "anthropic", "llama"],
+            "default": "openai"
+          }
+        },
+        "required": ["code", "sourceLanguage", "targetLanguage"]
+      }
+    },
+    {
+      "name": "get_local_files_info",
+      "description": "Obtém informações detalhadas de todos os arquivos nas pastas MCP",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "includeContent": {
+            "type": "boolean",
+            "description": "Se deve incluir preview do conteúdo dos arquivos",
+            "default": true
+          },
+          "maxContentLength": {
+            "type": "number",
+            "description": "Tamanho máximo do preview de conteúdo",
+            "default": 2000
+          }
+        }
+      }
+    },
+    {
+      "name": "format_context_for_ai",
+      "description": "Formata o contexto MCP para prompts de IA",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "contexts": {
+            "type": "array",
+            "description": "Lista de contextos de pastas MCP",
+            "items": {
+              "type": "object",
+              "properties": {
+                "folderName": {
+                  "type": "string"
+                },
+                "files": {
+                  "type": "array"
+                },
+                "totalFiles": {
+                  "type": "number"
+                }
+              }
+            }
+          }
+        },
+        "required": ["contexts"]
+      }
+    },
+    {
+      "name": "run_mcp_demo",
+      "description": "Executa demonstração completa das funcionalidades MCP",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "demoType": {
+            "type": "string",
+            "description": "Tipo de demonstração",
+            "enum": ["simple", "full", "enhanced"],
+            "default": "full"
+          }
+        }
+      }
+    },
+    {
+      "name": "build_mcp_server",
+      "description": "Compila o servidor MCP standalone",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "outputPath": {
+            "type": "string",
+            "description": "Caminho de saída para o build",
+            "default": "dist/"
+          }
+        }
+      }
+    },
+    {
+      "name": "simplify_code",
+      "description": "Simplifica código removendo comentários e reduzindo complexidade",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "Código fonte a ser simplificado"
+          },
+          "options": {
+            "type": "object",
+            "properties": {
+              "removeComments": {
+                "type": "boolean",
+                "default": true
+              },
+              "reduceKeywords": {
+                "type": "boolean",
+                "default": false
+              },
+              "minify": {
+                "type": "boolean",
+                "default": false
+              }
+            }
+          }
+        },
+        "required": ["code"]
+      }
+    },
+    {
+      "name": "process_files",
+      "description": "Processa múltiplos arquivos com simplificação e conversão",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "sourceFolder": {
+            "type": "string",
+            "description": "Pasta com arquivos de origem"
+          },
+          "outputFolder": {
+            "type": "string",
+            "description": "Pasta de destino"
+          },
+          "simplificationOptions": {
+            "type": "object",
+            "properties": {
+              "removeComments": {
+                "type": "boolean",
+                "default": true
+              },
+              "reduceKeywords": {
+                "type": "boolean",
+                "default": false
+              },
+              "minify": {
+                "type": "boolean",
+                "default": false
+              }
+            }
+          },
+          "conversionOptions": {
+            "type": "object",
+            "properties": {
+              "targetLanguage": {
+                "type": "string",
+                "description": "Linguagem alvo para conversão"
+              },
+              "provider": {
+                "type": "string",
+                "enum": ["openai", "gemini", "anthropic", "llama"]
+              },
+              "apiKey": {
+                "type": "string",
+                "description": "Chave de API do provedor"
+              }
+            },
+            "required": ["targetLanguage", "provider", "apiKey"]
+          }
+        },
+        "required": ["sourceFolder", "outputFolder", "conversionOptions"]
+      }
+    },
+    {
+      "name": "get_file_statistics",
+      "description": "Obtém estatísticas detalhadas dos arquivos nas pastas MCP",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "folderName": {
+            "type": "string",
+            "description": "Pasta específica para analisar (opcional)",
+            "enum": ["primaria", "intermediario", "destino final"]
+          },
+          "includeSize": {
+            "type": "boolean",
+            "description": "Se deve incluir informações de tamanho",
+            "default": true
+          }
+        }
+      }
+    },
+    {
+      "name": "validate_mcp_structure",
+      "description": "Valida a estrutura das pastas MCP e arquivos",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "basePath": {
+            "type": "string",
+            "description": "Caminho base para validação",
+            "default": "c:\\projetos\\electron-code-migrator"
+          },
+          "createMissing": {
+            "type": "boolean",
+            "description": "Se deve criar pastas ausentes",
+            "default": false
+          }
+        }
+      }
+    },
+    {
+      "name": "export_mcp_config",
+      "description": "Exporta configuração MCP para arquivo",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "outputPath": {
+            "type": "string",
+            "description": "Caminho para salvar a configuração",
+            "default": "mcp-export.json"
+          },
+          "includeSecrets": {
+            "type": "boolean",
+            "description": "Se deve incluir chaves de API (não recomendado)",
+            "default": false
+          }
+        }
+      }
+    },
+    {
+      "name": "test_mcp_integration",
+      "description": "Executa testes de integração MCP",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "testType": {
+            "type": "string",
+            "description": "Tipo de teste a executar",
+            "enum": ["basic", "full", "conversion", "file-operations"],
+            "default": "basic"
+          },
+          "verbose": {
+            "type": "boolean",
+            "description": "Se deve mostrar saída detalhada",
+            "default": false
+          }
+        }
+      }
+    }
+  ],
+  "capabilities": {
+    "file_operations": {
+      "read": ["primaria", "intermediario", "destino final"],
+      "write": ["destino final"],
+      "create": ["destino final"],
+      "delete": ["destino final"]
+    },
+    "code_conversion": {
+      "supported_languages": [
+        "javascript",
+        "typescript",
+        "python",
+        "java",
+        "csharp",
+        "go",
+        "rust"
+      ],
+      "ai_providers": ["openai", "gemini", "anthropic", "llama"],
+      "context_aware": true
+    },
+    "ai_integration": {
+      "enhanced_prompts": true,
+      "local_context": true,
+      "suggestion_types": ["mcp_create", "mcp_modify", "mcp_delete", "standard"]
+    }
+  },
+  "workflows": [
+    {
+      "name": "code_migration",
+      "description": "Fluxo completo de migração de código com contexto MCP",
+      "steps": [
+        "get_local_files_info",
+        "analyze_code_with_agent",
+        "convert_code_with_context",
+        "create_file_in_destination"
+      ]
+    },
+    {
+      "name": "project_analysis",
+      "description": "Análise completa do projeto usando contexto MCP",
+      "steps": [
+        "list_files_in_folder",
+        "search_files_by_extension",
+        "read_file_content",
+        "format_context_for_ai"
+      ]
+    },
+    {
+      "name": "ai_assisted_conversion",
+      "description": "Conversão assistida por IA com contexto local",
+      "steps": [
+        "get_local_files_info",
+        "convert_code_with_context",
+        "analyze_code_with_agent"
+      ]
+    }
+  ],
+  "metadata": {
+    "version": "1.0.0",
+    "description": "Electron Code Migrator with MCP Integration",
+    "author": "MCP Enhanced System",
+    "features": [
+      "Local file access",
+      "AI-powered code conversion",
+      "Context-aware suggestions",
+      "Multi-language support",
+      "Intelligent file operations"
+    ],
+    "folders": {
+      "primaria": "Arquivos fonte originais (somente leitura)",
+      "intermediario": "Arquivos em processo de conversão (somente leitura)",
+      "destino final": "Arquivos convertidos finais (leitura/escrita/criação/exclusão)"
+    }
+  }
+}
+{
+  "inputs": [
+    {
+      "id": "github_pat",
+      "description": "GitHub personal access token",
+      "type": "promptString",
+      "password": true
+    },
+    {
+      "id": "openai_api_key",
+      "description": "OpenAI API key for code conversion",
+      "type": "promptString",
+      "password": true
+    },
+    {
+      "id": "anthropic_api_key",
+      "description": "Anthropic API key for Claude models",
+      "type": "promptString",
+      "password": true
+    },
+    {
+      "id": "gemini_api_key",
+      "description": "Google Gemini API key",
+      "type": "promptString",
+      "password": true
+    },
+    {
+      "id": "base_path",
+      "description": "Base path for project files",
+      "type": "promptString",
+      "default": "c:\\projetos\\electron-code-migrator"
+    }
+  ],
+  "servers": {
+    "github": {
+      "type": "stdio",
+      "command": "docker",
+      "args": [
+        "run",
+        "-i",
+        "--rm",
+        "-e",
+        "GITHUB_PERSONAL_ACCESS_TOKEN",
+        "ghcr.io/github/github-mcp-server"
+      ],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "${input:github_pat}"
+      }
+    },
+    "electron-code-migrator": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["dist/mcp-server.js"],
+      "env": {
+        "NODE_PATH": "node_modules",
+        "BASE_PATH": "${input:base_path}",
+        "OPENAI_API_KEY": "${input:openai_api_key}",
+        "ANTHROPIC_API_KEY": "${input:anthropic_api_key}",
+        "GEMINI_API_KEY": "${input:gemini_api_key}"
+      }
+    },
+    "enhanced-processor": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "-e",
+        "const { analyzeCodeWithAgent } = require('./dist/processor.js'); console.log('Enhanced processor with MCP ready');"
+      ],
+      "env": {
+        "NODE_PATH": "node_modules",
+        "BASE_PATH": "${input:base_path}",
+        "OPENAI_API_KEY": "${input:openai_api_key}",
+        "ANTHROPIC_API_KEY": "${input:anthropic_api_key}",
+        "GEMINI_API_KEY": "${input:gemini_api_key}"
+      }
+    },
+    "mcp-file-manager": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["-e", "console.log('MCP File Manager ready for operations');"],
+      "env": {
+        "NODE_PATH": "node_modules",
+        "BASE_PATH": "${input:base_path}"
+      }
+    },
+    "code-converter": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "-e",
+        "const { MCPIntegratedConverter } = require('./dist/mcp-converter.js'); const converter = new MCPIntegratedConverter('${input:openai_api_key}'); console.log('MCP Code Converter ready');"
+      ],
+      "env": {
+        "NODE_PATH": "node_modules",
+        "OPENAI_API_KEY": "${input:openai_api_key}",
+        "ANTHROPIC_API_KEY": "${input:anthropic_api_key}",
+        "GEMINI_API_KEY": "${input:gemini_api_key}",
+        "BASE_PATH": "${input:base_path}"
+      }
+    },
+    "demo-server": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["dist/full-mcp-demo.js"],
+      "env": {
+        "NODE_PATH": "node_modules",
+        "BASE_PATH": "${input:base_path}"
+      }
+    }
+  },
+  "tools": [
+    {
+      "name": "list_files_in_folder",
+      "description": "Lista arquivos em uma pasta específica (primaria, intermediario, destino final)",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "folderName": {
+            "type": "string",
+            "description": "Nome da pasta: primaria, intermediario, ou destino final",
+            "enum": ["primaria", "intermediario", "destino final"]
+          },
+          "basePath": {
+            "type": "string",
+            "description": "Caminho base onde as pastas estão localizadas",
+            "default": "c:\\projetos\\electron-code-migrator"
+          }
+        },
+        "required": ["folderName"]
+      }
+    },
+    {
+      "name": "read_file_content",
+      "description": "Lê o conteúdo de um arquivo específico",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "filePath": {
+            "type": "string",
+            "description": "Caminho completo do arquivo a ser lido"
+          },
+          "maxLength": {
+            "type": "number",
+            "description": "Tamanho máximo do conteúdo a ser retornado",
+            "default": 2000
+          }
+        },
+        "required": ["filePath"]
+      }
+    },
+    {
+      "name": "search_files_by_extension",
+      "description": "Busca arquivos por extensão nas pastas MCP",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "extension": {
+            "type": "string",
+            "description": "Extensão do arquivo (.js, .ts, .py, .java, etc.)"
+          },
+          "folderName": {
+            "type": "string",
+            "description": "Pasta específica para buscar (opcional)",
+            "enum": ["primaria", "intermediario", "destino final"]
+          }
+        },
+        "required": ["extension"]
+      }
+    },
+    {
+      "name": "get_all_folders_context",
+      "description": "Obtém contexto completo de todas as pastas MCP",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "includeContent": {
+            "type": "boolean",
+            "description": "Se deve incluir preview do conteúdo dos arquivos",
+            "default": true
+          },
+          "maxContentLength": {
+            "type": "number",
+            "description": "Tamanho máximo do preview de conteúdo",
+            "default": 2000
+          }
+        }
+      }
+    },
+    {
+      "name": "analyze_code_with_agent",
+      "description": "Analisa código com IA e contexto MCP para sugestões inteligentes",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "files": {
+            "type": "array",
+            "description": "Lista de arquivos para analisar",
+            "items": {
+              "type": "object",
+              "properties": {
+                "simplified": {
+                  "type": "string",
+                  "description": "Caminho do arquivo simplificado"
+                },
+                "converted": {
+                  "type": "string",
+                  "description": "Caminho do arquivo convertido"
+                }
+              },
+              "required": ["simplified", "converted"]
+            }
+          },
+          "targetLanguage": {
+            "type": "string",
+            "description": "Linguagem alvo para conversão"
+          },
+          "provider": {
+            "type": "string",
+            "description": "Provedor de IA (openai, gemini, anthropic, llama)",
+            "enum": ["openai", "gemini", "anthropic", "llama"]
+          }
+        },
+        "required": ["files", "targetLanguage", "provider"]
+      }
+    },
+    {
+      "name": "create_file_in_destination",
+      "description": "Cria um novo arquivo na pasta 'destino final'",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "fileName": {
+            "type": "string",
+            "description": "Nome do arquivo a ser criado"
+          },
+          "content": {
+            "type": "string",
+            "description": "Conteúdo do arquivo"
+          }
+        },
+        "required": ["fileName", "content"]
+      }
+    },
+    {
+      "name": "modify_file_in_destination",
+      "description": "Modifica um arquivo existente na pasta 'destino final'",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "fileName": {
+            "type": "string",
+            "description": "Nome do arquivo a ser modificado"
+          },
+          "content": {
+            "type": "string",
+            "description": "Novo conteúdo do arquivo"
+          }
+        },
+        "required": ["fileName", "content"]
+      }
+    },
+    {
+      "name": "delete_file_in_destination",
+      "description": "Remove um arquivo da pasta 'destino final'",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "fileName": {
+            "type": "string",
+            "description": "Nome do arquivo a ser removido"
+          }
+        },
+        "required": ["fileName"]
+      }
+    },
+    {
+      "name": "convert_code_with_context",
+      "description": "Converte código usando contexto local dos arquivos MCP",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "Código fonte a ser convertido"
+          },
+          "sourceLanguage": {
+            "type": "string",
+            "description": "Linguagem de origem"
+          },
+          "targetLanguage": {
+            "type": "string",
+            "description": "Linguagem de destino"
+          },
+          "customPrompt": {
+            "type": "string",
+            "description": "Prompt personalizado para conversão (opcional)"
+          },
+          "provider": {
+            "type": "string",
+            "description": "Provedor de IA (openai, gemini, anthropic, llama)",
+            "enum": ["openai", "gemini", "anthropic", "llama"],
+            "default": "openai"
+          }
+        },
+        "required": ["code", "sourceLanguage", "targetLanguage"]
+      }
+    },
+    {
+      "name": "get_local_files_info",
+      "description": "Obtém informações detalhadas de todos os arquivos nas pastas MCP",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "includeContent": {
+            "type": "boolean",
+            "description": "Se deve incluir preview do conteúdo dos arquivos",
+            "default": true
+          },
+          "maxContentLength": {
+            "type": "number",
+            "description": "Tamanho máximo do preview de conteúdo",
+            "default": 2000
+          }
+        }
+      }
+    },
+    {
+      "name": "format_context_for_ai",
+      "description": "Formata o contexto MCP para prompts de IA",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "contexts": {
+            "type": "array",
+            "description": "Lista de contextos de pastas MCP",
+            "items": {
+              "type": "object",
+              "properties": {
+                "folderName": {
+                  "type": "string"
+                },
+                "files": {
+                  "type": "array"
+                },
+                "totalFiles": {
+                  "type": "number"
+                }
+              }
+            }
+          }
+        },
+        "required": ["contexts"]
+      }
+    },
+    {
+      "name": "run_mcp_demo",
+      "description": "Executa demonstração completa das funcionalidades MCP",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "demoType": {
+            "type": "string",
+            "description": "Tipo de demonstração",
+            "enum": ["simple", "full", "enhanced"],
+            "default": "full"
+          }
+        }
+      }
+    },
+    {
+      "name": "build_mcp_server",
+      "description": "Compila o servidor MCP standalone",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "outputPath": {
+            "type": "string",
+            "description": "Caminho de saída para o build",
+            "default": "dist/"
+          }
+        }
+      }
+    },
+    {
+      "name": "simplify_code",
+      "description": "Simplifica código removendo comentários e reduzindo complexidade",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "Código fonte a ser simplificado"
+          },
+          "options": {
+            "type": "object",
+            "properties": {
+              "removeComments": {
+                "type": "boolean",
+                "default": true
+              },
+              "reduceKeywords": {
+                "type": "boolean",
+                "default": false
+              },
+              "minify": {
+                "type": "boolean",
+                "default": false
+              }
+            }
+          }
+        },
+        "required": ["code"]
+      }
+    },
+    {
+      "name": "process_files",
+      "description": "Processa múltiplos arquivos com simplificação e conversão",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "sourceFolder": {
+            "type": "string",
+            "description": "Pasta com arquivos de origem"
+          },
+          "outputFolder": {
+            "type": "string",
+            "description": "Pasta de destino"
+          },
+          "simplificationOptions": {
+            "type": "object",
+            "properties": {
+              "removeComments": {
+                "type": "boolean",
+                "default": true
+              },
+              "reduceKeywords": {
+                "type": "boolean",
+                "default": false
+              },
+              "minify": {
+                "type": "boolean",
+                "default": false
+              }
+            }
+          },
+          "conversionOptions": {
+            "type": "object",
+            "properties": {
+              "targetLanguage": {
+                "type": "string",
+                "description": "Linguagem alvo para conversão"
+              },
+              "provider": {
+                "type": "string",
+                "enum": ["openai", "gemini", "anthropic", "llama"]
+              },
+              "apiKey": {
+                "type": "string",
+                "description": "Chave de API do provedor"
+              }
+            },
+            "required": ["targetLanguage", "provider", "apiKey"]
+          }
+        },
+        "required": ["sourceFolder", "outputFolder", "conversionOptions"]
+      }
+    },
+    {
+      "name": "get_file_statistics",
+      "description": "Obtém estatísticas detalhadas dos arquivos nas pastas MCP",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "folderName": {
+            "type": "string",
+            "description": "Pasta específica para analisar (opcional)",
+            "enum": ["primaria", "intermediario", "destino final"]
+          },
+          "includeSize": {
+            "type": "boolean",
+            "description": "Se deve incluir informações de tamanho",
+            "default": true
+          }
+        }
+      }
+    },
+    {
+      "name": "validate_mcp_structure",
+      "description": "Valida a estrutura das pastas MCP e arquivos",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "basePath": {
+            "type": "string",
+            "description": "Caminho base para validação",
+            "default": "c:\\projetos\\electron-code-migrator"
+          },
+          "createMissing": {
+            "type": "boolean",
+            "description": "Se deve criar pastas ausentes",
+            "default": false
+          }
+        }
+      }
+    },
+    {
+      "name": "export_mcp_config",
+      "description": "Exporta configuração MCP para arquivo",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "outputPath": {
+            "type": "string",
+            "description": "Caminho para salvar a configuração",
+            "default": "mcp-export.json"
+          },
+          "includeSecrets": {
+            "type": "boolean",
+            "description": "Se deve incluir chaves de API (não recomendado)",
+            "default": false
+          }
+        }
+      }
+    },
+    {
+      "name": "test_mcp_integration",
+      "description": "Executa testes de integração MCP",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "testType": {
+            "type": "string",
+            "description": "Tipo de teste a executar",
+            "enum": ["basic", "full", "conversion", "file-operations"],
+            "default": "basic"
+          },
+          "verbose": {
+            "type": "boolean",
+            "description": "Se deve mostrar saída detalhada",
+            "default": false
+          }
+        }
+      }
+    }
+  ],
+  "capabilities": {
+    "file_operations": {
+      "read": ["primaria", "intermediario", "destino final"],
+      "write": ["destino final"],
+      "create": ["destino final"],
+      "delete": ["destino final"]
+    },
+    "code_conversion": {
+      "supported_languages": [
+        "javascript",
+        "typescript",
+        "python",
+        "java",
+        "csharp",
+        "go",
+        "rust"
+      ],
+      "ai_providers": ["openai", "gemini", "anthropic", "llama"],
+      "context_aware": true
+    },
+    "ai_integration": {
+      "enhanced_prompts": true,
+      "local_context": true,
+      "suggestion_types": ["mcp_create", "mcp_modify", "mcp_delete", "standard"]
+    }
+  },
+  "workflows": [
+    {
+      "name": "code_migration",
+      "description": "Fluxo completo de migração de código com contexto MCP",
+      "steps": [
+        "get_local_files_info",
+        "analyze_code_with_agent",
+        "convert_code_with_context",
+        "create_file_in_destination"
+      ]
+    },
+    {
+      "name": "project_analysis",
+      "description": "Análise completa do projeto usando contexto MCP",
+      "steps": [
+        "list_files_in_folder",
+        "search_files_by_extension",
+        "read_file_content",
+        "format_context_for_ai"
+      ]
+    },
+    {
+      "name": "ai_assisted_conversion",
+      "description": "Conversão assistida por IA com contexto local",
+      "steps": [
+        "get_local_files_info",
+        "convert_code_with_context",
+        "analyze_code_with_agent"
+      ]
+    }
+  ],
+  "metadata": {
+    "version": "1.0.0",
+    "description": "Electron Code Migrator with MCP Integration",
+    "author": "MCP Enhanced System",
+    "features": [
+      "Local file access",
+      "AI-powered code conversion",
+      "Context-aware suggestions",
+      "Multi-language support",
+      "Intelligent file operations"
+    ],
+    "folders": {
+      "primaria": "Arquivos fonte originais (somente leitura)",
+      "intermediario": "Arquivos em processo de conversão (somente leitura)",
+      "destino final": "Arquivos convertidos finais (leitura/escrita/criação/exclusão)"
+    }
+  }
+}
